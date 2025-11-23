@@ -10,6 +10,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Tooling: Ruff added for lint/format; `uv run ruff format` and `uv run ruff check` succeed on the codebase.
 - Packaging: Added Hatch build config and `tool.uv.package = true` with `blog/__init__.py` so `uv run generate-blog` installs its entrypoint correctly.
 - CI/CD: GitHub Actions Pages workflow added at `.github/workflows/deploy.yml`; builds with uv and deploys `blog/dist` to Pages on `main`, PRs, schedule, and manual triggers.
+- Favicon: `blog/favicon.png` is copied to `dist` and linked in `base.html`.
 
 # Open Challenges & Risks
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.

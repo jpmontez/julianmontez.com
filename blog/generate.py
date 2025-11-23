@@ -136,6 +136,9 @@ def copy_assets() -> None:
     shutil.copy2(ROOT / "theme.css", DIST_DIR / "style.css")
     if STATIC_DIR.exists():
         shutil.copytree(STATIC_DIR, DIST_DIR / "static", dirs_exist_ok=True)
+    favicon = ROOT / "favicon.png"
+    if favicon.exists():
+        shutil.copy2(favicon, DIST_DIR / "favicon.png")
 
 
 def make_env() -> Environment:
