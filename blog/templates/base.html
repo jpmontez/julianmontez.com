@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ site.description }}" />
+    <link rel="stylesheet" href="{{ assets_prefix }}/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site">
+        <span class="title">{{ site.title }}</span>
+        <span class="tagline">{{ site.tagline }}</span>
+      </header>
+      {% block content %}{% endblock %}
+      <div class="footer">
+        &copy; {{ now.year }}
+      </div>
+    </div>
+  </body>
+</html>

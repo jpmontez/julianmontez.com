@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% for post in posts %}
+    <article class="post {{ post.layout }}">
+      <div class="post-header">
+        {% if post.title %}
+          <div class="title">
+            {{ post.title }}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if post.images %}
+        {% for image in post.images %}
+          <figure>
+            <img src="{{ assets_prefix }}/{{ image }}" alt="{{ post.title or 'Post image' }}" />
+          </figure>
+        {% endfor %}
+      {% endif %}
+
+      {% if post.excerpt %}
+        <div class="body" style="text-align: center;">
+          <p>{{ post.excerpt }}</p>
+        </div>
+      {% elif post.body_html %}
+        <div class="body">
+          {{ post.body_html | safe }}
+        </div>
+      {% endif %}
+
+      <div class="meta">
+        <a href="{{ assets_prefix }}/{{ post.url }}index.html">{{ post.display_date }}</a>
+      </div>
+    </article>
+  {% else %}
+    <div class="feed-nav">No posts yet — add Markdown files under blog/posts/YYYY/MM/</div>
+  {% endfor %}
+
+  {% if pagination and pagination.total_pages > 1 %}
+    <div class="feed-nav">
+      {% if pagination.prev_url %}
+        <a href="{{ pagination.prev_url }}">Newer</a>
+      {% endif %}
+      {% if pagination.prev_url and pagination.next_url %} • {% endif %}
+      {% if pagination.next_url %}
+        <a href="{{ pagination.next_url }}">Older</a>
+      {% endif %}
+      <div class="meta" style="margin-top:8px; letter-spacing: 0.08em;">
+        Page {{ pagination.current_page }} of {{ pagination.total_pages }}
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

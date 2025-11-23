@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <article class="post {{ post.layout }}">
+    <div class="post-header">
+      {% if post.title %}
+        <div class="title">{{ post.title }}</div>
+      {% endif %}
+    </div>
+
+    {% if post.images %}
+      {% for image in post.images %}
+        <figure>
+          <img src="{{ assets_prefix }}/{{ image }}" alt="{{ post.title or 'Post image' }}" />
+        </figure>
+      {% endfor %}
+    {% endif %}
+
+    {% if post.excerpt %}
+      <div class="excerpt">
+        <p>{{ post.excerpt }}</p>
+      </div>
+    {% endif %}
+
+    {% if post.body_html %}
+      <div class="body">
+        {{ post.body_html | safe }}
+      </div>
+    {% endif %}
+
+    <div class="meta">
+      {{ post.display_date }}
+    </div>
+  </article>
+
+  <div class="feed-nav">
+    <a href="{{ assets_prefix }}/index.html">Back to feed</a>
+  </div>
+{% endblock %}
