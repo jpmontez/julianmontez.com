@@ -210,13 +210,14 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
 
     for post in posts_list:
         out_dir = DIST_DIR / str(post.date.year) / f"{post.date.month:02d}" / post.slug
+        output_file = out_dir / "index.html"
         context = {
             "page_title": f"{post.title or 'Post'} — {site['title']}",
             "post": post,
             "site": site,
             "now": now,
         }
-        render_page(env, "post.html", out_dir / "index.html", context)
+        render_page(env, "post.html", output_file, context)
 
 
 def main(argv: list[str] | None = None) -> int:
