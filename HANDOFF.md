@@ -13,6 +13,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Favicon: `blog/favicon.png` is copied to `dist` and linked in `base.html`.
 - URLs: Feed and post links omit `index.html`; posts publish as directory-style `YYYY/MM/slug/` (index.html inside). Back-to-feed/pagination use trailing slashes.
 - Images now load lazily (`loading="lazy"`, `decoding="async"`) in index and post templates for performance.
+- CSS is now inlined from `theme.css` (and Google Fonts import removed) to avoid render-blocking requests; `style.css` is still written but not referenced.
 
 # Open Challenges & Risks
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.

@@ -205,6 +205,7 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
             "site": site,
             "now": now,
             "pagination": pagination,
+            "inline_style": site["inline_style"],
         }
         render_page(env, "index.html", page_output_path(page_num), index_context)
 
@@ -216,6 +217,7 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
             "post": post,
             "site": site,
             "now": now,
+            "inline_style": site["inline_style"],
         }
         render_page(env, "post.html", output_file, context)
 
@@ -234,6 +236,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"Config not found: {args.config}")
 
     site = load_config(args.config)
+    site["inline_style"] = (ROOT / "theme.css").read_text(encoding="utf-8")
     ensure_empty_dir(DIST_DIR)
     copy_assets()
 
