@@ -14,7 +14,12 @@
       {% if post.images %}
         {% for image in post.images %}
           <figure>
-            <img src="{{ assets_prefix }}/{{ image }}" alt="{{ post.title or 'Post image' }}" />
+            <img
+              src="{{ assets_prefix }}/{{ image }}"
+              alt="{{ post.title or 'Post image' }}"
+              loading="lazy"
+              decoding="async"
+            />
           </figure>
         {% endfor %}
       {% endif %}
