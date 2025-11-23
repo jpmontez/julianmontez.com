@@ -16,6 +16,11 @@ Generate the site:
 uv run generate-blog
 ```
 
+Preview locally:
+```bash
+cd blog/dist && python -m http.server 8000
+```
+
 ## Writing posts
 Add Markdown files under `blog/posts/YYYY/MM/slug.md` with TOML front matter wrapped by `++++` lines:
 ```markdown
@@ -35,5 +40,6 @@ Full Markdown body here. Links like [GitHub Pages](https://pages.github.com/) wo
 
 ## Assets
 - Place photos in `blog/static/`; they are copied to `dist/static/`.
-- Theme styles live in `blog/theme.css` and are copied to `dist/style.css`.
+- Theme styles live in `blog/theme.css` and are inlined into each page (also emitted as `dist/style.css`, currently unused). Google Fonts import removed to avoid render-blocking.
 - Layout is fully center-aligned, with the title 64px from the top and 36px above the tagline.
+- Images are lazy-loaded (`loading="lazy"`, `decoding="async"`). Posts render at `/YYYY/MM/slug/` (directory-style `index.html` inside).

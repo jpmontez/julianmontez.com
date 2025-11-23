@@ -12,10 +12,10 @@ Static Tumblr-style microblog generated with Python and uv. The generator builds
 - Python 3.11+, uv for env/deps; Jinja2 for templating; Markdown for post bodies; Ruff for lint/format.
 - Entrypoint: `blog/generate.py` (also exposed as the `generate-blog` script).
 - Templates: `blog/templates/index.html` (feed with pagination) and `blog/templates/post.html` (per-post pages).
-- Styling: `blog/theme.css` (copied to `dist/style.css` on build), monochrome/centered Tumblr-inspired layout.
+- Styling: `blog/theme.css` is inlined into each page on build (also emitted as `dist/style.css`, currently unused); monochrome/centered Tumblr-inspired layout with lazy-loaded images.
 - Config: `blog/config.toml` (title, tagline, description, optional `base_url`).
 - Content: `blog/posts/YYYY/MM/` Markdown with TOML front matter; assets in `blog/static/` are copied to `dist/static/`.
-- Output: `blog/dist/` with `index.html`, paginated feeds (`/page/N/`), and per-post pages at `/YYYY/MM/slug/`.
+- Output: `blog/dist/` with `index.html`, paginated feeds (`/page/N/`), and per-post pages at `/YYYY/MM/slug/` (directory-style `index.html` inside each slug).
 
 ## Writing posts
 Place Markdown files under `blog/posts/YYYY/MM/` using dated filenames like `2024-10-12-your-slug.md`:
@@ -36,3 +36,4 @@ Posts are ordered reverse-chronologically. Titles are not links; the date/meta l
 - Pagination is built in (10 posts per page).
 - Tagline stays visible; footer shows `© {{ now.year }}` only.
 - Layout: 64px top padding on the title, 36px spacing between title and tagline; feed excerpts centered, post bodies left-aligned. Images have a subtle shadow.
+- Images use `loading="lazy"`; CSS is inlined to avoid render-blocking requests; Google Fonts import removed.
