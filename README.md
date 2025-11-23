@@ -1,6 +1,6 @@
 # julianmontez.com microblog
 
-Static Tumblr-style microblog generated with Python and uv. The generator builds a fully static site into `blog/dist`, ready for GitHub Pages or any static host.
+Static Tumblr-style microblog generated with Python and uv. The generator builds a fully static site into `blog/dist`, ready for Cloudflare Pages or any static host.
 
 ## Quick start
 1. Install deps: `uv sync`
@@ -37,3 +37,6 @@ Posts are ordered reverse-chronologically. Titles are not links; the date/meta l
 - Tagline stays visible; footer shows `© {{ now.year }}` only.
 - Layout: 64px top padding on the title, 36px spacing between title and tagline; feed excerpts centered, post bodies left-aligned. Images have a subtle shadow.
 - Images use `loading="lazy"`; CSS is inlined to avoid render-blocking requests; Google Fonts import removed.
+
+## CI/CD
+- GitHub Actions builds on push/PR/schedule and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3`. Configure secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`.

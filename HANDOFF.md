@@ -9,7 +9,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Sample content: 20 posts under `blog/posts/YYYY/MM/` with dated filenames; images randomized across the three SVGs.
 - Tooling: Ruff added for lint/format; `uv run ruff format` and `uv run ruff check` succeed on the codebase.
 - Packaging: Added Hatch build config and `tool.uv.package = true` with `blog/__init__.py` so `uv run generate-blog` installs its entrypoint correctly.
-- CI/CD: GitHub Actions Pages workflow added at `.github/workflows/deploy.yml`; builds with uv and deploys `blog/dist` to Pages on `main`, PRs, schedule, and manual triggers.
+- CI/CD: GitHub Actions workflow at `.github/workflows/deploy.yml` builds with uv and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`); runs on main, PRs, schedule, and manual triggers.
 - Favicon: `blog/favicon.png` is copied to `dist` and linked in `base.html`.
 - URLs: Feed and post links omit `index.html`; posts publish as directory-style `YYYY/MM/slug/` (index.html inside). Back-to-feed/pagination use trailing slashes.
 - Images now load lazily (`loading="lazy"`, `decoding="async"`) in index and post templates for performance.

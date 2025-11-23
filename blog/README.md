@@ -21,6 +21,8 @@ Preview locally:
 cd blog/dist && python -m http.server 8000
 ```
 
+Deploy: CI builds with GitHub Actions and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`).
+
 ## Writing posts
 Add Markdown files under `blog/posts/YYYY/MM/slug.md` with TOML front matter wrapped by `++++` lines:
 ```markdown

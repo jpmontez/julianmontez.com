@@ -12,16 +12,16 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+  deployments: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment: cloudflare-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,22 +40,9 @@ jobs:
       - name: Build blog
         run: uv run generate-blog
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: ./blog/dist
-
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy blog/dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }}
