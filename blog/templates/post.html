@@ -8,14 +8,15 @@
       {% endif %}
     </div>
 
-    {% if post.images %}
-      {% for image in post.images %}
+    {% if post.images_meta %}
+      {% for image in post.images_meta %}
         <figure>
           <img
-            src="{{ assets_prefix }}/{{ image }}"
+            src="{{ assets_prefix }}/{{ image.path }}"
             alt="{{ post.title or 'Post image' }}"
             loading="lazy"
             decoding="async"
+            {% if image.width and image.height %}width="{{ image.width }}" height="{{ image.height }}"{% endif %}
           />
         </figure>
       {% endfor %}

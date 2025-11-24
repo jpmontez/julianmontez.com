@@ -14,7 +14,9 @@
         <span class="title">{{ site.title }}</span>
         <span class="tagline">{{ site.tagline }}</span>
       </header>
-      {% block content %}{% endblock %}
+      <main role="main">
+        {% block content %}{% endblock %}
+      </main>
       <div class="footer">
         &copy; {{ now.year }}
       </div>

@@ -6,7 +6,7 @@ import math
 import os
 import shutil
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
@@ -22,6 +22,10 @@ try:  # Prefer the markdown package but keep a basic fallback.
 except Exception:  # pragma: no cover - fallback is intentionally simple.
     markdown = None
 
+try:
+    from PIL import Image
+except ImportError as exc:  # pragma: no cover - runtime dependency hint
+    raise SystemExit("Pillow is required. Run `uv sync` before generating.") from exc
 
 ROOT = Path(__file__).resolve().parent
 POSTS_DIR = ROOT / "posts"
@@ -29,6 +33,19 @@ STATIC_DIR = ROOT / "static"
 DIST_DIR = ROOT / "dist"
 TEMPLATES_DIR = ROOT / "templates"
 POSTS_PER_PAGE = 10
+
+
+@dataclass
+class ImageMeta:
+    path: str
+    width: int | None
+    height: int | None
+
+    @property
+    def aspect_ratio(self) -> float | None:
+        if self.width and self.height:
+            return self.width / self.height
+        return None
 
 
 @dataclass
@@ -43,6 +60,7 @@ class Post:
     display_date: str
     url: str
     slug: str
+    images_meta: list[ImageMeta] = field(default_factory=list)
 
 
 def render_markdown(text: str) -> str:
@@ -130,6 +148,35 @@ def ensure_empty_dir(path: Path) -> None:
     if path.exists():
         shutil.rmtree(path)
     path.mkdir(parents=True, exist_ok=True)
+
+
+def image_dimensions(image_path: Path) -> tuple[int | None, int | None]:
+    if not image_path.exists():
+        return None, None
+
+    try:
+        with Image.open(image_path) as img:
+            width, height = img.size
+            return int(width), int(height)
+    except Exception:
+        return None, None
+
+
+def attach_image_meta(posts: list[Post]) -> None:
+    cache: dict[str, tuple[int | None, int | None]] = {}
+
+    for post in posts:
+        metas: list[ImageMeta] = []
+        for image in post.images:
+            if image not in cache:
+                candidate = Path(image)
+                image_path = candidate if candidate.is_absolute() else ROOT / candidate
+                cache[image] = image_dimensions(image_path)
+
+            width, height = cache[image]
+            metas.append(ImageMeta(path=image, width=width, height=height))
+
+        post.images_meta = metas
 
 
 def copy_assets() -> None:
@@ -241,6 +288,7 @@ def main(argv: list[str] | None = None) -> int:
     copy_assets()
 
     posts = collect_posts()
+    attach_image_meta(posts)
     env = make_env()
     build(posts, site, env)
 
