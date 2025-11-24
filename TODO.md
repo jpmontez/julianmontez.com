@@ -1,12 +1,8 @@
 # TODO
 
-- Improve image delivery (mobile): responsive variants and srcset/sizes now generated automatically; verify PageSpeed impact.
-  - Generator creates multiple widths for raster assets and emits `srcset`/`sizes`; non-LCP images remain lazy-loaded.
-  - Keep Lightroom workflow simple (single export); confirm sizing/quality are appropriate and adjust widths/quality if needed.
-  - Re-run PageSpeed mobile after these changes to confirm improvements.
-- Fix mobile LCP: first image is now prioritized (eager + `fetchpriority="high"` with optional preload); verify results.
-  - Re-run PageSpeed mobile after the change to confirm LCP improvement; adjust if still flagged.
-  - Ensure the generator keeps tagging the first feed image (and per-post hero) as eager/high-priority while leaving others lazy.
+- Fix mobile LCP and responsive images: verified via PageSpeed (100/100 Perf/Access/Best Practices/SEO). Keep an eye on future regressions.
+  - Generator creates multiple widths for raster assets and emits `srcset`/`sizes`; non-LCP images remain lazy-loaded; LCP image prioritized (no preload).
+  - Keep Lightroom workflow simple (single export); adjust widths/quality only if future audits regress.
 - Add a gallery view for multi-photo posts.
   - This would only be utilized in a dedicated post page.
 - Add sitemap.xml (with images).

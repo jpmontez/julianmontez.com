@@ -21,16 +21,14 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 
 # Open Challenges & Risks
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.
-- Mobile PageSpeed image delivery: responsive variants/srcset added; need to verify PageSpeed impact and adjust widths/quality if required.
-- Mobile PageSpeed LCP concerns addressed by prioritizing the first image (eager load + `fetchpriority="high"` + optional preload); still need to recheck PageSpeed to confirm improvement.
+- PageSpeed (mobile): now scoring 100/100 for Performance, Accessibility, Best Practices, and SEO after responsive variants/srcset and LCP prioritization changes (no preload). Monitor for regressions.
 - `tool.uv.dev-dependencies` is deprecated; expect to move to `dependency-groups.dev` in pyproject soon.
 - New dependency: Pillow for reading intrinsic image dimensions during generation; ensure environments install it (`uv sync`) before running the generator.
 
 # Next Steps (Actionable)
-1) Re-run PageSpeed mobile to validate responsive variants/srcset and the prioritized LCP image; adjust widths/quality/strategy if still flagged.
-2) Implement gallery/lightbox for multi-image posts on per-post pages (`blog/templates/post.html`, `blog/theme.css`, potentially JS if added). Reference TODO.md.
-3) Migrate uv config to `dependency-groups.dev` in `pyproject.toml` to silence the warning.
-4) Monitor the Pages workflow on first runs; verify the deployed site renders correctly and adjust caching/paths if needed.
+1) Implement gallery/lightbox for multi-image posts on per-post pages (`blog/templates/post.html`, `blog/theme.css`, potentially JS if added). Reference TODO.md.
+2) Migrate uv config to `dependency-groups.dev` in `pyproject.toml` to silence the warning.
+3) Monitor the Pages workflow on first runs; verify the deployed site renders correctly and adjust caching/paths if needed.
 Run `uv run generate-blog` after changes; check `blog/dist` output.
 
 # Environment & Tooling

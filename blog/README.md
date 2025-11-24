@@ -42,6 +42,7 @@ Full Markdown body here. Links like [GitHub Pages](https://pages.github.com/) wo
 
 ## Assets
 - Place photos in `blog/static/`; they are copied to `dist/static/`.
+- Generator auto-creates responsive raster variants (480/720/1080 widths when smaller than the source) and emits `srcset`/`sizes`; the first image on a page is eager with `fetchpriority="high"` (no preload), others stay lazy.
 - Theme styles live in `blog/theme.css` and are inlined into each page (also emitted as `dist/style.css`, currently unused). Google Fonts import removed to avoid render-blocking.
 - Layout is fully center-aligned, with the title 64px from the top and 36px above the tagline.
 - Images are lazy-loaded (`loading="lazy"`, `decoding="async"`). Posts render at `/YYYY/MM/slug/` (directory-style `index.html` inside).

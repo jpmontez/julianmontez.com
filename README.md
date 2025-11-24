@@ -40,6 +40,7 @@ Static Tumblr-style microblog generated with Python and uv. The generator builds
 - Config: `blog/config.toml` (title, tagline, description, optional `base_url`).
 - Content: `blog/posts/YYYY/MM/` Markdown with TOML front matter; assets in `blog/static/` are copied to `dist/static/`.
 - Output: `blog/dist/` with `index.html`, paginated feeds (`/page/N/`), and per-post pages at `/YYYY/MM/slug/` (directory-style `index.html` inside each slug).
+- Images: generator reads intrinsic dimensions, emits responsive variants (480/720/1080 where smaller than original) with `srcset`/`sizes`, and keeps the first image eager with `fetchpriority="high"` (no preload); others remain lazy.
 
 ## Writing posts
 Place Markdown files under `blog/posts/YYYY/MM/` using dated filenames like `2024-10-12-your-slug.md`:
