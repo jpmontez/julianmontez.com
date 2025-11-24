@@ -55,9 +55,7 @@ def parse_candidates(source_dir: Path) -> list[Photo]:
 
 
 def prompt_overwrite(photo: Photo) -> bool:
-    prompt = (
-        f"{photo.destination.name} already exists. Overwrite with {photo.source.name}? [y/N]: "
-    )
+    prompt = f"{photo.destination.name} already exists. Overwrite with {photo.source.name}? [y/N]: "
     reply = input(prompt).strip().lower()
     return reply in {"y", "yes"}
 
@@ -85,10 +83,7 @@ def sanitize_slug(value: str) -> str:
 
 
 def prompt_slug(date: dt.date, default_slug: str) -> str:
-    prompt = (
-        f"Multiple images on {date:%Y-%m-%d}. "
-        f"Enter a custom name (default: {default_slug}): "
-    )
+    prompt = f"Multiple images on {date:%Y-%m-%d}. Enter a custom name (default: {default_slug}): "
     while True:
         user_input = input(prompt).strip()
         slug = sanitize_slug(user_input) if user_input else default_slug
