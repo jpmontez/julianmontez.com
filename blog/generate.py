@@ -33,6 +33,7 @@ STATIC_DIR = ROOT / "static"
 DIST_DIR = ROOT / "dist"
 TEMPLATES_DIR = ROOT / "templates"
 POSTS_PER_PAGE = 10
+RESPONSIVE_WIDTHS = [480, 720, 1080]
 
 
 @dataclass
@@ -40,6 +41,8 @@ class ImageMeta:
     path: str
     width: int | None
     height: int | None
+    srcset: list[tuple[str, int]] = field(default_factory=list)
+    primary_src: str | None = None
 
     @property
     def aspect_ratio(self) -> float | None:
@@ -162,8 +165,61 @@ def image_dimensions(image_path: Path) -> tuple[int | None, int | None]:
         return None, None
 
 
+def generate_variants(
+    source_path: Path, dist_path: Path, widths: list[int], original: tuple[int | None, int | None]
+) -> list[tuple[str, int]]:
+    src_width, src_height = original
+    if not src_width or not src_height:
+        return []
+
+    suffix = source_path.suffix.lower()
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+        return []
+
+    dist_dir = dist_path.parent
+    dist_dir.mkdir(parents=True, exist_ok=True)
+
+    variants: list[tuple[str, int]] = []
+    for target_width in widths:
+        if target_width >= src_width:
+            continue
+
+        target_height = max(1, round(src_height * (target_width / src_width)))
+        target_path = dist_dir / f"{source_path.stem}-{target_width}w{source_path.suffix}"
+        if not target_path.exists():
+            with Image.open(source_path) as img:
+                resized = img.resize((target_width, target_height), Image.LANCZOS)
+                fmt = (img.format or "").upper()
+                save_kwargs = {}
+                if fmt in {"JPG", "JPEG"}:
+                    save_kwargs = {"quality": 85, "optimize": True, "progressive": True}
+                elif fmt == "PNG":
+                    save_kwargs = {"optimize": True}
+                resized.save(target_path, **save_kwargs)
+
+        variants.append((target_path.relative_to(DIST_DIR).as_posix(), target_width))
+
+    variants.append((dist_path.relative_to(DIST_DIR).as_posix(), src_width))
+    return variants
+
+
+def choose_primary_src(
+    srcset: list[tuple[str, int]],
+    fallback: str,
+    target_width: int = 1040,
+) -> str:
+    if not srcset:
+        return fallback
+    sorted_srcset = sorted(srcset, key=lambda item: item[1])
+    for candidate_path, candidate_width in sorted_srcset:
+        if candidate_width >= target_width:
+            return candidate_path
+    return sorted_srcset[-1][0]
+
+
 def attach_image_meta(posts: list[Post]) -> None:
     cache: dict[str, tuple[int | None, int | None]] = {}
+    variants_cache: dict[str, list[tuple[str, int]]] = {}
 
     for post in posts:
         metas: list[ImageMeta] = []
@@ -172,9 +228,32 @@ def attach_image_meta(posts: list[Post]) -> None:
                 candidate = Path(image)
                 image_path = candidate if candidate.is_absolute() else ROOT / candidate
                 cache[image] = image_dimensions(image_path)
+                if candidate.is_absolute():
+                    variants_cache[image] = []
+                else:
+                    dist_path = DIST_DIR / candidate
+                    variants_cache[image] = generate_variants(
+                        source_path=image_path,
+                        dist_path=dist_path,
+                        widths=RESPONSIVE_WIDTHS,
+                        original=cache[image],
+                    )
 
             width, height = cache[image]
-            metas.append(ImageMeta(path=image, width=width, height=height))
+            variants = variants_cache.get(image, [])
+            primary_src = choose_primary_src(
+                srcset=variants,
+                fallback=image if candidate.is_absolute() else (DIST_DIR / candidate).relative_to(DIST_DIR).as_posix(),
+            )
+            metas.append(
+                ImageMeta(
+                    path=image,
+                    width=width,
+                    height=height,
+                    srcset=variants,
+                    primary_src=primary_src,
+                )
+            )
 
         post.images_meta = metas
 
@@ -238,10 +317,6 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
         end = start + POSTS_PER_PAGE
         page_posts = posts_list[start:end]
 
-        lcp_preload = None
-        if page_posts and page_posts[0].images_meta:
-            lcp_preload = page_posts[0].images_meta[0].path
-
         pagination = {
             "current_page": page_num,
             "total_pages": total_pages,
@@ -260,21 +335,18 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
             "now": now,
             "pagination": pagination,
             "inline_style": site["inline_style"],
-            "lcp_preload": lcp_preload,
         }
         render_page(env, "index.html", page_output_path(page_num), index_context)
 
     for post in posts_list:
         out_dir = DIST_DIR / str(post.date.year) / f"{post.date.month:02d}" / post.slug
         output_file = out_dir / "index.html"
-        lcp_preload = post.images_meta[0].path if post.images_meta else None
         context = {
             "page_title": f"{post.title or 'Post'} — {site['title']}",
             "post": post,
             "site": site,
             "now": now,
             "inline_style": site["inline_style"],
-            "lcp_preload": lcp_preload,
         }
         render_page(env, "post.html", output_file, context)
 

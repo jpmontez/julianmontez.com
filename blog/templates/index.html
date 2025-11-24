@@ -17,10 +17,16 @@
           {% set is_lcp = is_first_post and loop.first %}
           <figure>
             <img
-              src="{{ assets_prefix }}/{{ image.path }}"
+              src="{{ assets_prefix }}/{{ image.primary_src or image.path }}"
               alt="{{ post.title or 'Post image' }}"
               loading="{{ 'eager' if is_lcp else 'lazy' }}"
-              {% if is_lcp %}fetchpriority="high"{% endif %}
+              {% if is_lcp %}
+              fetchpriority="high"
+              {% endif %}
+              {% if image.srcset %}
+              srcset="{% for variant, variant_width in image.srcset %}{{ assets_prefix }}/{{ variant }} {{ variant_width }}w{% if not loop.last %}, {% endif %}{% endfor %}"
+              sizes="(max-width: 720px) 100vw, 520px"
+              {% endif %}
               decoding="async"
               {% if image.width and image.height %}width="{{ image.width }}" height="{{ image.height }}"{% endif %}
             />
