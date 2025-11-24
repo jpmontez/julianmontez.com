@@ -12,6 +12,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Generator now reads static image dimensions (JPEG/PNG via Pillow) and emits width/height on `<img>` tags in index/post templates; `<main role="main">` added around primary content to satisfy accessibility/landmark checks.
 - CI/CD: GitHub Actions workflow at `.github/workflows/deploy.yml` builds with uv and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`); runs on main, PRs, schedule, and manual triggers.
 - Favicon: `blog/favicon.png` is copied to `dist` and linked in `base.html`.
+- Robots: `blog/robots.txt` added with Cloudflare content-signal directives, bot blocks, and /lp,/feedback,/langtest disallows; generator copies it to the dist root.
 - URLs: Feed and post links omit `index.html`; posts publish as directory-style `YYYY/MM/slug/` (index.html inside). Back-to-feed/pagination use trailing slashes.
 - Images now load lazily (`loading="lazy"`, `decoding="async"`) in index and post templates for performance.
 - CSS is now inlined from `theme.css` (and Google Fonts import removed) to avoid render-blocking requests; `style.css` is still written but not referenced.
@@ -34,6 +35,7 @@ Run `uv run generate-blog` after changes; check `blog/dist` output.
 - Entrypoints: `uv run generate-blog` (or `uv run python blog/generate.py`).
 - Lint/format: `uv run ruff format` then `uv run ruff check`.
 - Config: `blog/config.toml` (title, tagline, description, optional `base_url` for correct asset linking when hosted).
+- Makefile: `make install` (uv sync), `make build` (install + generate), `make preview` (serve `blog/dist` on :8080 after build), `make clean`/`distclean` (remove `blog/dist`; `distclean` also removes `.uv`/`.venv`), `make import [LIGHTROOM_EXPORT_DIR=~/Desktop]` (run import script), `make format`/`lint`/`check` (Ruff), `make regen` (clean + build).
 
 # Data, Artifacts & Contracts
 - Content: `blog/posts/YYYY/MM/*.md` with dated filenames (e.g., `2025-01-20-post-01.md`), TOML front matter with `title`, `date` (ISO), `images` (list of paths under `static/`), optional `excerpt`, `layout`.

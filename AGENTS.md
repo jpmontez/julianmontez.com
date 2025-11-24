@@ -61,6 +61,7 @@ When implementing features, fixing bugs, or refactoring:
 - While coding:
   - Follow existing patterns, conventions, and styles you infer from the code and docs.
   - Keep the existing architecture and contracts unless explicitly asked to change them.
+  - Prefer the Makefile targets for common workflows (install/build/preview/import/lint) instead of ad-hoc commands when possible.
 - After coding:
   - Update `TODO.md`:
     - Mark items as done or partially complete with a short note.

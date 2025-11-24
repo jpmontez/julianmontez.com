@@ -7,7 +7,8 @@
   - ~~Add intrinsic width/height/aspect-ratio for generated `<img>` tags (ideally using real image dimensions from static assets).~~
   - ~~Ensure CSS preserves responsive scaling without layout shift.~~
 - ~~Add a main landmark (`<main role="main">`) around primary content for accessibility.~~
-- Add sitemap.xml (with images) and robots.txt.
+- Add sitemap.xml (with images).
+- ~~Add robots.txt.~~
 - Add canonical/meta updates and per-post meta descriptions.
 - ~~Automate Lightroom JPG exports and initial post skeleton creation/boilerplate~~
 - ~~Add lazy-loading to images.~~

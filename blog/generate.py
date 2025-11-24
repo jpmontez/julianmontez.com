@@ -186,6 +186,9 @@ def copy_assets() -> None:
     favicon = ROOT / "favicon.png"
     if favicon.exists():
         shutil.copy2(favicon, DIST_DIR / "favicon.png")
+    robots = ROOT / "robots.txt"
+    if robots.exists():
+        shutil.copy2(robots, DIST_DIR / "robots.txt")
 
 
 def make_env() -> Environment:

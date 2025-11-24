@@ -8,6 +8,15 @@ Static Tumblr-style microblog generated with Python and uv. The generator builds
 3. Preview: open `blog/dist/index.html` (or serve `blog/dist` with any static server)
 4. Lint/format: `uv run ruff format` then `uv run ruff check`
 
+## Makefile shortcuts
+- `make install`: install deps with uv.
+- `make build`: install then run the generator.
+- `make preview`: build, then serve `blog/dist` on port 8080.
+- `make clean` / `make distclean`: remove `blog/dist`; `distclean` also removes `.uv`/`.venv`.
+- `make import [LIGHTROOM_EXPORT_DIR=~/Desktop]`: import Lightroom exports via `scripts/import_lightroom.py`.
+- `make format` / `make lint` / `make check`: Ruff format, check, or both.
+- `make regen`: clean then build.
+
 ## Import Lightroom photos
 - Run `uv run python scripts/import_lightroom.py` (default source: `~/Desktop`; expected names: `YYYYMMDD-DSC_NNNN.jpg`).
 - The script copies exports into `blog/static/` as `YYYY-MM-DD-DSC_NNNN.jpg`, leaves the Desktop originals untouched, and scaffolds posts at `blog/posts/YYYY/MM/YYYY-MM-DD-<slug>.md` with photo front matter:
