@@ -238,6 +238,10 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
         end = start + POSTS_PER_PAGE
         page_posts = posts_list[start:end]
 
+        lcp_preload = None
+        if page_posts and page_posts[0].images_meta:
+            lcp_preload = page_posts[0].images_meta[0].path
+
         pagination = {
             "current_page": page_num,
             "total_pages": total_pages,
@@ -256,18 +260,21 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
             "now": now,
             "pagination": pagination,
             "inline_style": site["inline_style"],
+            "lcp_preload": lcp_preload,
         }
         render_page(env, "index.html", page_output_path(page_num), index_context)
 
     for post in posts_list:
         out_dir = DIST_DIR / str(post.date.year) / f"{post.date.month:02d}" / post.slug
         output_file = out_dir / "index.html"
+        lcp_preload = post.images_meta[0].path if post.images_meta else None
         context = {
             "page_title": f"{post.title or 'Post'} — {site['title']}",
             "post": post,
             "site": site,
             "now": now,
             "inline_style": site["inline_style"],
+            "lcp_preload": lcp_preload,
         }
         render_page(env, "post.html", output_file, context)
 

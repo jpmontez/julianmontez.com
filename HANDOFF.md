@@ -20,14 +20,15 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 
 # Open Challenges & Risks
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.
+- Mobile PageSpeed LCP concerns addressed by prioritizing the first image (eager load + `fetchpriority="high"` + optional preload); still need to recheck PageSpeed to confirm improvement.
 - `tool.uv.dev-dependencies` is deprecated; expect to move to `dependency-groups.dev` in pyproject soon.
 - New dependency: Pillow for reading intrinsic image dimensions during generation; ensure environments install it (`uv sync`) before running the generator.
 
 # Next Steps (Actionable)
-1) Implement gallery/lightbox for multi-image posts on per-post pages (`blog/templates/post.html`, `blog/theme.css`, potentially JS if added). Reference TODO.md.
-2) Migrate uv config to `dependency-groups.dev` in `pyproject.toml` to silence the warning.
-3) Monitor the Pages workflow on first runs; verify the deployed site renders correctly and adjust caching/paths if needed.
-4) Re-run PageSpeed/mobile CLS checks to confirm width/height and main landmark fixes resolved reported issues.
+1) Re-run PageSpeed mobile to confirm LCP improvements after prioritizing the first image (eager + `fetchpriority="high"` + optional preload); adjust generator/templates if still flagged.
+2) Implement gallery/lightbox for multi-image posts on per-post pages (`blog/templates/post.html`, `blog/theme.css`, potentially JS if added). Reference TODO.md.
+3) Migrate uv config to `dependency-groups.dev` in `pyproject.toml` to silence the warning.
+4) Monitor the Pages workflow on first runs; verify the deployed site renders correctly and adjust caching/paths if needed.
 Run `uv run generate-blog` after changes; check `blog/dist` output.
 
 # Environment & Tooling

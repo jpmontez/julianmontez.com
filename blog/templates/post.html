@@ -10,11 +10,13 @@
 
     {% if post.images_meta %}
       {% for image in post.images_meta %}
+        {% set is_hero = loop.first %}
         <figure>
           <img
             src="{{ assets_prefix }}/{{ image.path }}"
             alt="{{ post.title or 'Post image' }}"
-            loading="lazy"
+            loading="{{ 'eager' if is_hero else 'lazy' }}"
+            {% if is_hero %}fetchpriority="high"{% endif %}
             decoding="async"
             {% if image.width and image.height %}width="{{ image.width }}" height="{{ image.height }}"{% endif %}
           />

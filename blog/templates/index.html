@@ -2,6 +2,7 @@
 
 {% block content %}
   {% for post in posts %}
+    {% set is_first_post = loop.first %}
     <article class="post {{ post.layout }}">
       <div class="post-header">
         {% if post.title %}
@@ -13,11 +14,13 @@
 
       {% if post.images_meta %}
         {% for image in post.images_meta %}
+          {% set is_lcp = is_first_post and loop.first %}
           <figure>
             <img
               src="{{ assets_prefix }}/{{ image.path }}"
               alt="{{ post.title or 'Post image' }}"
-              loading="lazy"
+              loading="{{ 'eager' if is_lcp else 'lazy' }}"
+              {% if is_lcp %}fetchpriority="high"{% endif %}
               decoding="async"
               {% if image.width and image.height %}width="{{ image.width }}" height="{{ image.height }}"{% endif %}
             />

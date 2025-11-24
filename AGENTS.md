@@ -127,6 +127,7 @@ To keep the repository coherent across multiple agents:
      - Update `HANDOFF.md`.
    - If a change adds, removes, or completes tasks:
      - Update `TODO.md`.
+   - When striking through completed TODO items, move them below the active/ongoing tasks to keep the current queue most visible.
 
 5. **Be honest about uncertainty**
    - If you cannot fully determine a detail from the repo, mark it as uncertain rather than guessing.
