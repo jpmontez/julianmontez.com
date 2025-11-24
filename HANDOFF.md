@@ -14,6 +14,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - URLs: Feed and post links omit `index.html`; posts publish as directory-style `YYYY/MM/slug/` (index.html inside). Back-to-feed/pagination use trailing slashes.
 - Images now load lazily (`loading="lazy"`, `decoding="async"`) in index and post templates for performance.
 - CSS is now inlined from `theme.css` (and Google Fonts import removed) to avoid render-blocking requests; `style.css` is still written but not referenced.
+- Helper script: `scripts/import_lightroom.py` scans `~/Desktop` for Lightroom JPG exports (`YYYYMMDD-DSC_NNNN.jpg`), copies them into `blog/static/`, and scaffolds `blog/posts/YYYY/MM/*.md` with the photo front matter; prompts for a custom slug when multiple photos share a date; prompts before overwriting an existing asset (pass `--overwrite` to force); uses logging; originals on Desktop stay untouched.
 
 # Open Challenges & Risks
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.

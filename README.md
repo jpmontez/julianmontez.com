@@ -8,6 +8,21 @@ Static Tumblr-style microblog generated with Python and uv. The generator builds
 3. Preview: open `blog/dist/index.html` (or serve `blog/dist` with any static server)
 4. Lint/format: `uv run ruff format` then `uv run ruff check`
 
+## Import Lightroom photos
+- Run `uv run python scripts/import_lightroom.py` (default source: `~/Desktop`; expected names: `YYYYMMDD-DSC_NNNN.jpg`).
+- The script copies exports into `blog/static/` as `YYYY-MM-DD-DSC_NNNN.jpg`, leaves the Desktop originals untouched, and scaffolds posts at `blog/posts/YYYY/MM/YYYY-MM-DD-<slug>.md` with photo front matter:
+  ```
+  ++++
+  date = YYYY-MM-DD
+  images = [
+    "static/YYYY-MM-DD-DSC_NNNN.jpg",
+    …
+  ]
+  layout = "photo"
+  ++++
+  ```
+- If multiple photos share a date, you'll be prompted for a custom slug; if a destination image already exists, you'll be prompted to overwrite (or pass `--overwrite` to skip prompts). Use `--source /path/to/dir` to scan another folder.
+
 ## Architecture & layout
 - Python 3.11+, uv for env/deps; Jinja2 for templating; Markdown for post bodies; Ruff for lint/format.
 - Entrypoint: `blog/generate.py` (also exposed as the `generate-blog` script).

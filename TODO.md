@@ -5,6 +5,7 @@
 - Add width/height or CSS aspect-ratio; ensure responsive sizing (max-width: 100%, height: auto).
 - Add sitemap.xml (with images) and robots.txt.
 - Add canonical/meta updates and per-post meta descriptions.
+- ~~Automate Lightroom JPG exports and initial post skeleton creation/boilerplate~~
 - ~~Add lazy-loading to images.~~
 - ~~Cleanup the URL slugs so that `index.html` is not visible.~~
 - ~~Implement a CI/CD pipeline~~
