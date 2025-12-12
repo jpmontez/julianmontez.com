@@ -1,6 +1,6 @@
 # Microblog Generator
 
-Static, Tumblr-inspired microblog powered by a small Python generator. Output lives in `blog/dist`, ready to push to GitHub Pages.
+Static, Tumblr-inspired microblog powered by a small Python generator. Output lives in `blog/dist`, ready for Cloudflare Pages or any static host.
 
 ## Requirements
 - Python 3.11+
@@ -29,7 +29,9 @@ Add Markdown files under `blog/posts/YYYY/MM/slug.md` with TOML front matter wra
 +++
 title = "Brooklyn Night Rain"
 date = 2024-10-12
-images = ["static/my-photo.jpg"]
+images = [
+  { src = "static/my-photo.jpg", alt = "Describe the photo." },
+]
 excerpt = "Optional short blurb for the index."
 layout = "photo"
 +++
@@ -38,7 +40,9 @@ Full Markdown body here. Links like [GitHub Pages](https://pages.github.com/) wo
 ```
 
 ## Config
-`blog/config.toml` controls site-level text and `base_url`. Set `base_url` if publishing under a subpath (e.g. `/julianmontez.com/blog`).
+`blog/config.toml` controls site-level text plus:
+- `site_url` (optional): your public origin (e.g. `https://julianmontez.com`) to emit absolute canonical/OG URLs and absolute sitemap locs.
+- `base_url` (optional): a path prefix if publishing under a subpath (e.g. `/julianmontez.com/blog`).
 
 ## Assets
 - Place photos in `blog/static/`; they are copied to `dist/static/`.
@@ -46,3 +50,4 @@ Full Markdown body here. Links like [GitHub Pages](https://pages.github.com/) wo
 - Theme styles live in `blog/theme.css` and are inlined into each page (also emitted as `dist/style.css`, currently unused). Google Fonts import removed to avoid render-blocking.
 - Layout is fully center-aligned, with the title 64px from the top and 36px above the tagline.
 - Images are lazy-loaded (`loading="lazy"`, `decoding="async"`). Posts render at `/YYYY/MM/slug/` (directory-style `index.html` inside).
+- Generator writes `dist/sitemap.xml` and ensures `dist/robots.txt` points at it.

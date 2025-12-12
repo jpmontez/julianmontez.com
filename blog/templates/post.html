@@ -14,7 +14,7 @@
         <figure>
           <img
             src="{{ assets_prefix }}/{{ image.primary_src or image.path }}"
-            alt="{{ post.title or 'Post image' }}"
+            alt="{{ image.alt if image.alt is not none else (post.title or 'Photo') }}"
             loading="{{ 'eager' if is_hero else 'lazy' }}"
             {% if is_hero %}
             fetchpriority="high"

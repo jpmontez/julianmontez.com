@@ -60,4 +60,4 @@ Disallow: /feedback
 Disallow: /langtest
 
 
-Sitemap: https://www.crawlstop.com/sitemap.xml
+Sitemap: /sitemap.xml
