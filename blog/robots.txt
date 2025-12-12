@@ -60,4 +60,4 @@ Disallow: /feedback
 Disallow: /langtest
 
 
-Sitemap: /sitemap.xml
+Sitemap: https://julianmontez.com/sitemap.xml
