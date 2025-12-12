@@ -8,3 +8,7 @@ site_url = "https://julianmontez.com"
 # base_url lets you host the generated site in a subdirectory (e.g. /julianmontez.com/blog).
 # Leave empty to use relative URLs.
 base_url = ""
+# eager_images controls how many images at the top of each page load eagerly (instead of
+# `loading="lazy"`). The generator picks the likely LCP image among these and applies
+# `fetchpriority="high"` + a preload directive.
+eager_images = 2

@@ -37,6 +37,7 @@ DIST_DIR = ROOT / "dist"
 TEMPLATES_DIR = ROOT / "templates"
 POSTS_PER_PAGE = 10
 RESPONSIVE_WIDTHS = [480, 720, 1080]
+IMAGE_SIZES_ATTR = "(max-width: 720px) 100vw, 520px"
 
 
 @dataclass
@@ -180,6 +181,7 @@ def load_config(path: Path) -> dict:
         "author": "",
         "base_url": "",
         "site_url": "",
+        "eager_images": 2,
     }
     defaults.update(data)
     return defaults
@@ -297,6 +299,35 @@ def attach_image_meta(posts: list[Post]) -> None:
             )
 
         post.images_meta = metas
+
+
+def image_src(meta: ImageMeta) -> str:
+    return meta.primary_src or meta.path
+
+
+def image_lcp_score(meta: ImageMeta) -> float:
+    if meta.width and meta.height and meta.width > 0:
+        return meta.height / meta.width
+    return 0.0
+
+
+def select_lcp_meta(candidates: list[ImageMeta]) -> ImageMeta | None:
+    if not candidates:
+        return None
+    # If candidates are equally sized in the viewport, the later element can
+    # become the LCP candidate, so break ties by picking the last one.
+    return max(enumerate(candidates), key=lambda item: (image_lcp_score(item[1]), item[0]))[1]
+
+
+def select_above_fold_metas(metas: Iterable[ImageMeta], count: int) -> list[ImageMeta]:
+    selected: list[ImageMeta] = []
+    if count <= 0:
+        return selected
+    for meta in metas:
+        selected.append(meta)
+        if len(selected) >= count:
+            break
+    return selected
 
 
 def copy_assets() -> None:
@@ -427,6 +458,7 @@ def render_page(env: Environment, template_name: str, output_path: Path, context
 def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
     now = dt.datetime.now(dt.timezone.utc)
     posts_list = list(posts)
+    eager_images_count = max(0, int(site.get("eager_images", 2) or 0))
 
     def page_output_path(page_number: int) -> Path:
         if page_number == 1:
@@ -473,7 +505,21 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
             "now": now,
             "pagination": pagination,
             "inline_style": site["inline_style"],
+            "image_sizes": IMAGE_SIZES_ATTR,
         }
+
+        feed_images = select_above_fold_metas(
+            (meta for post in page_posts for meta in post.images_meta),
+            eager_images_count,
+        )
+        lcp_meta = select_lcp_meta(feed_images)
+        index_context.update(
+            eager_image_ids=[image_src(meta) for meta in feed_images],
+            lcp_image_id=image_src(lcp_meta) if lcp_meta else None,
+            preload_image=(
+                {"src": image_src(lcp_meta), "srcset": lcp_meta.srcset} if lcp_meta else None
+            ),
+        )
         render_page(env, "index.html", page_output_path(page_num), index_context)
 
     def infer_post_description(post: Post) -> str:
@@ -491,6 +537,8 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
     for post in posts_list:
         out_dir = DIST_DIR / str(post.date.year) / f"{post.date.month:02d}" / post.slug
         output_file = out_dir / "index.html"
+        post_images = select_above_fold_metas(post.images_meta, eager_images_count)
+        post_lcp_meta = select_lcp_meta(post_images)
         context = {
             "page_title": f"{post.title or 'Post'} — {site['title']}",
             "page_path": post.url,
@@ -505,6 +553,14 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
             "site": site,
             "now": now,
             "inline_style": site["inline_style"],
+            "image_sizes": IMAGE_SIZES_ATTR,
+            "eager_image_ids": [image_src(meta) for meta in post_images],
+            "lcp_image_id": image_src(post_lcp_meta) if post_lcp_meta else None,
+            "preload_image": (
+                {"src": image_src(post_lcp_meta), "srcset": post_lcp_meta.srcset}
+                if post_lcp_meta
+                else None
+            ),
         }
         render_page(env, "post.html", output_file, context)
 

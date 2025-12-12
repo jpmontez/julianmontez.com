@@ -40,7 +40,7 @@ Static Tumblr-style microblog generated with Python and uv. The generator builds
 - Config: `blog/config.toml` (title, tagline, description, optional `site_url` for absolute canonical/sitemap URLs, optional `base_url` for subpath hosting).
 - Content: `blog/posts/YYYY/MM/` Markdown with TOML front matter; assets in `blog/static/` are copied to `dist/static/`.
 - Output: `blog/dist/` with `index.html`, `sitemap.xml`, `robots.txt`, paginated feeds (`/page/N/`), and per-post pages at `/YYYY/MM/slug/` (directory-style `index.html` inside each slug).
-- Images: generator reads intrinsic dimensions, emits responsive variants (480/720/1080 where smaller than original) with `srcset`/`sizes`, and keeps the first image eager with `fetchpriority="high"` (no preload); others remain lazy.
+- Images: generator reads intrinsic dimensions, emits responsive variants (480/720/1080 where smaller than original) with `srcset`/`sizes`, eagerly loads the first `eager_images` images (default: 2), and applies `fetchpriority="high"` + a preload directive to the likely mobile LCP image among them.
 
 ## Writing posts
 Place Markdown files under `blog/posts/YYYY/MM/` using dated filenames like `2024-10-12-your-slug.md`:
@@ -63,7 +63,7 @@ Posts are ordered reverse-chronologically. Titles are not links; the date/meta l
 - Pagination is built in (10 posts per page).
 - Tagline stays visible; footer shows `© {{ now.year }}` only.
 - Layout: 64px top padding on the title, 36px spacing between title and tagline; feed excerpts centered, post bodies left-aligned. Images have a subtle shadow.
-- Images use `loading="lazy"`; CSS is inlined to avoid render-blocking requests; Google Fonts import removed.
+- Images below the fold use `loading="lazy"`; CSS is inlined to avoid render-blocking requests; Google Fonts import removed.
 
 ## CI/CD
 - GitHub Actions builds on push/PR/schedule and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3`. Configure secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`.

@@ -16,6 +16,18 @@
     {% endif %}
     <meta name="twitter:card" content="{{ twitter_card }}" />
     <link rel="icon" type="image/png" href="{{ assets_prefix }}/favicon.png" />
+    {% if preload_image %}
+      <link
+        rel="preload"
+        as="image"
+        href="{{ assets_prefix }}/{{ preload_image.src }}"
+        fetchpriority="high"
+        {% if preload_image.srcset %}
+        imagesrcset="{% for variant, variant_width in preload_image.srcset %}{{ assets_prefix }}/{{ variant }} {{ variant_width }}w{% if not loop.last %}, {% endif %}{% endfor %}"
+        imagesizes="{{ image_sizes }}"
+        {% endif %}
+      />
+    {% endif %}
     <style>{{ inline_style | safe }}</style>
   </head>
   <body>

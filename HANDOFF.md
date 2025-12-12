@@ -9,7 +9,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Tooling: Ruff is available via uv (dev dependency group); `uv run ruff format` and `uv run ruff check` succeed on the codebase.
 - Packaging: Added Hatch build config and `tool.uv.package = true` with `blog/__init__.py` so `uv run generate-blog` installs its entrypoint correctly.
 - Generator now reads static image dimensions (JPEG/PNG via Pillow) and emits width/height on `<img>` tags in index/post templates; `<main role="main">` added around primary content to satisfy accessibility/landmark checks.
-- Generator now creates responsive raster variants (480/720/1080 widths where applicable) and emits `srcset`/`sizes`; first image on feed/post pages remains eager with `fetchpriority="high"` and optional preload, others stay lazy.
+- Generator now creates responsive raster variants (480/720/1080 widths where applicable) and emits `srcset`/`sizes`; the first `eager_images` images (default: 2) load eagerly, and the generator picks the likely mobile LCP image among them for `fetchpriority="high"` + a preload directive.
 - Generator enables Jinja2 autoescape and emits canonical + basic OpenGraph meta tags on pages; it also writes `dist/sitemap.xml` and keeps `dist/robots.txt` pointed at it.
 - `blog/config.toml` now sets `site_url` to emit fully-qualified canonical/OG URLs and absolute sitemap locs (fixes PageSpeed/Lighthouse `rel=canonical` absolute-URL audit).
 - Generator now ensures the `Sitemap:` directive in `dist/robots.txt` is always absolute (or omitted if an absolute base URL can't be determined), to satisfy Lighthouse/PageSpeed validation.
@@ -24,7 +24,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 
 # Open Challenges & Risks
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.
-- PageSpeed (mobile): now scoring 100/100 for Performance, Accessibility, Best Practices, and SEO after responsive variants/srcset and LCP prioritization changes (no preload). Monitor for regressions.
+- PageSpeed (mobile): monitor for LCP regressions as new photos/content change which above-the-fold image becomes LCP; generator now applies eager loading + `fetchpriority` + preload to the likely LCP image.
 - New dependency: Pillow for reading intrinsic image dimensions during generation; ensure environments install it (`uv sync`) before running the generator.
 - Ensure `site_url` remains accurate for the canonical domain (used for canonical/OG tags and sitemap locs).
 

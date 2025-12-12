@@ -2,7 +2,6 @@
 
 {% block content %}
   {% for post in posts %}
-    {% set is_first_post = loop.first %}
     <article class="post {{ post.layout }}">
       <div class="post-header">
         {% if post.title %}
@@ -14,18 +13,20 @@
 
       {% if post.images_meta %}
         {% for image in post.images_meta %}
-          {% set is_lcp = is_first_post and loop.first %}
+          {% set image_id = image.primary_src or image.path %}
+          {% set is_eager = image_id in eager_image_ids %}
+          {% set is_lcp = image_id == lcp_image_id %}
           <figure>
             <img
               src="{{ assets_prefix }}/{{ image.primary_src or image.path }}"
               alt="{{ image.alt if image.alt is not none else (post.title or 'Photo') }}"
-              loading="{{ 'eager' if is_lcp else 'lazy' }}"
+              loading="{{ 'eager' if is_eager else 'lazy' }}"
               {% if is_lcp %}
               fetchpriority="high"
               {% endif %}
               {% if image.srcset %}
               srcset="{% for variant, variant_width in image.srcset %}{{ assets_prefix }}/{{ variant }} {{ variant_width }}w{% if not loop.last %}, {% endif %}{% endfor %}"
-              sizes="(max-width: 720px) 100vw, 520px"
+              sizes="{{ image_sizes }}"
               {% endif %}
               decoding="async"
               {% if image.width and image.height %}width="{{ image.width }}" height="{{ image.height }}"{% endif %}

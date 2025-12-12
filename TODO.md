@@ -1,7 +1,7 @@
 # TODO
 
 - Fix mobile LCP and responsive images: verified via PageSpeed (100/100 Perf/Access/Best Practices/SEO). Keep an eye on future regressions.
-  - Generator creates multiple widths for raster assets and emits `srcset`/`sizes`; non-LCP images remain lazy-loaded; LCP image prioritized (no preload).
+  - Generator creates multiple widths for raster assets and emits `srcset`/`sizes`; the first `eager_images` images load eagerly and the likely mobile LCP image among them gets `fetchpriority="high"` + a preload directive.
   - Keep Lightroom workflow simple (single export); adjust widths/quality only if future audits regress.
 - Add a gallery view for multi-photo posts.
   - This would only be utilized in a dedicated post page.
