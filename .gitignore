@@ -5,6 +5,12 @@ blog/dist/
 __pycache__/
 *.pyc
 
+# Local env/caches
+.venv/
+.uv/
+.uv-cache/
+.ruff_cache/
+
 # macOS
 .DS_Store
 

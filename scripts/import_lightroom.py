@@ -118,7 +118,7 @@ def choose_slug(date: dt.date, photos: list[Photo]) -> tuple[str, Path]:
 
 
 def write_post(post_path: Path, date: dt.date, photos: list[Photo]) -> None:
-    images_lines = [f'  "static/{p.destination.name}",' for p in photos]
+    images_lines = [f'  {{ src = "static/{p.destination.name}" }},' for p in photos]
     content_lines = [
         "++++",
         f"date = {date:%Y-%m-%d}",

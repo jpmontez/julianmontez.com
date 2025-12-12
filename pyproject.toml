@@ -7,11 +7,15 @@ dependencies = [
     "jinja2>=3.1",
     "markdown>=3.6",
     "pillow>=10.4",
-    "ruff>=0.6.5",
 ]
 
 [project.scripts]
 generate-blog = "blog.generate:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6.5",
+]
 
 [build-system]
 requires = ["hatchling"]

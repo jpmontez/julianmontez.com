@@ -22,6 +22,10 @@ dependencies = [
     { name = "jinja2" },
     { name = "markdown" },
     { name = "pillow" },
+]
+
+[package.dev-dependencies]
+dev = [
     { name = "ruff" },
 ]
 
@@ -30,8 +34,10 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1" },
     { name = "markdown", specifier = ">=3.6" },
     { name = "pillow", specifier = ">=10.4" },
-    { name = "ruff", specifier = ">=0.6.5" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "ruff", specifier = ">=0.6.5" }]
 
 [[package]]
 name = "markdown"

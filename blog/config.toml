@@ -2,6 +2,9 @@ title = "Julian Montez"
 tagline = "Brooklyn, NY"
 description = "A topographical photoblog by Julian Montez"
 author = "Julian Montez"
+# site_url is the public site origin used for absolute canonical/OG URLs and sitemap locs.
+# Example: "https://julianmontez.com"
+site_url = ""
 # base_url lets you host the generated site in a subdirectory (e.g. /julianmontez.com/blog).
 # Leave empty to use relative URLs.
 base_url = ""

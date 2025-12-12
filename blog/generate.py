@@ -4,16 +4,19 @@ import argparse
 import datetime as dt
 import math
 import os
+import re
 import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import urljoin
+from xml.etree import ElementTree as ET
 
 import tomllib
 
 try:
-    from jinja2 import Environment, FileSystemLoader
+    from jinja2 import Environment, FileSystemLoader, select_autoescape
 except ImportError as exc:  # pragma: no cover - runtime dependency hint
     raise SystemExit("jinja2 is required. Run `uv sync` before generating.") from exc
 
@@ -43,6 +46,7 @@ class ImageMeta:
     height: int | None
     srcset: list[tuple[str, int]] = field(default_factory=list)
     primary_src: str | None = None
+    alt: str | None = None
 
     @property
     def aspect_ratio(self) -> float | None:
@@ -57,6 +61,7 @@ class Post:
     title: str | None
     date: dt.date
     images: list[str]
+    image_alts: list[str | None]
     excerpt: str | None
     layout: str
     body_html: str
@@ -93,6 +98,37 @@ def parse_front_matter(raw: str) -> tuple[dict, str]:
     return data, body
 
 
+def parse_images(meta: dict, source: Path) -> tuple[list[str], list[str | None]]:
+    raw = meta.get("images", [])
+    if raw is None:
+        return [], []
+    if not isinstance(raw, list):
+        raise ValueError(f"Invalid images field in {source}: expected a list")
+
+    images: list[str] = []
+    image_alts: list[str | None] = []
+
+    for idx, item in enumerate(raw):
+        if isinstance(item, str):
+            images.append(item)
+            image_alts.append(None)
+            continue
+
+        if isinstance(item, dict):
+            src = item.get("src") or item.get("path")
+            if not src:
+                raise ValueError(f"Invalid images[{idx}] in {source}: missing src")
+            images.append(str(src))
+
+            alt = item.get("alt")
+            image_alts.append(None if alt is None else str(alt))
+            continue
+
+        raise ValueError(f"Invalid images[{idx}] in {source}: expected string or table")
+
+    return images, image_alts
+
+
 def parse_post(path: Path) -> Post:
     raw = path.read_text(encoding="utf-8")
     meta, body_md = parse_front_matter(raw)
@@ -103,7 +139,7 @@ def parse_post(path: Path) -> Post:
         raise ValueError(f"Invalid or missing date in {path}") from exc
 
     title = meta.get("title")
-    images = list(meta.get("images", []))
+    images, image_alts = parse_images(meta, path)
     excerpt = meta.get("excerpt")
     layout = meta.get("layout", "photo")
     slug = path.stem
@@ -117,6 +153,7 @@ def parse_post(path: Path) -> Post:
         title=title,
         date=date,
         images=images,
+        image_alts=image_alts,
         excerpt=excerpt,
         layout=layout,
         body_html=body_html,
@@ -142,6 +179,7 @@ def load_config(path: Path) -> dict:
         "description": "",
         "author": "",
         "base_url": "",
+        "site_url": "",
     }
     defaults.update(data)
     return defaults
@@ -223,10 +261,12 @@ def attach_image_meta(posts: list[Post]) -> None:
 
     for post in posts:
         metas: list[ImageMeta] = []
-        for image in post.images:
+        for idx, image in enumerate(post.images):
+            candidate = Path(image)
+            image_path = candidate if candidate.is_absolute() else ROOT / candidate
+            alt = post.image_alts[idx] if idx < len(post.image_alts) else None
+
             if image not in cache:
-                candidate = Path(image)
-                image_path = candidate if candidate.is_absolute() else ROOT / candidate
                 cache[image] = image_dimensions(image_path)
                 if candidate.is_absolute():
                     variants_cache[image] = []
@@ -243,7 +283,7 @@ def attach_image_meta(posts: list[Post]) -> None:
             variants = variants_cache.get(image, [])
             primary_src = choose_primary_src(
                 srcset=variants,
-                fallback=image if candidate.is_absolute() else (DIST_DIR / candidate).relative_to(DIST_DIR).as_posix(),
+                fallback=image if candidate.is_absolute() else candidate.as_posix(),
             )
             metas.append(
                 ImageMeta(
@@ -252,6 +292,7 @@ def attach_image_meta(posts: list[Post]) -> None:
                     height=height,
                     srcset=variants,
                     primary_src=primary_src,
+                    alt=alt,
                 )
             )
 
@@ -271,7 +312,10 @@ def copy_assets() -> None:
 
 
 def make_env() -> Environment:
-    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATES_DIR),
+        autoescape=select_autoescape(enabled_extensions=("html", "xml")),
+    )
     env.trim_blocks = True
     env.lstrip_blocks = True
     return env
@@ -288,12 +332,95 @@ def compute_assets_prefix(output_file: Path, base_url: str) -> str:
     return "." if rel_posix == "." else rel_posix
 
 
+def is_absolute_url(value: str) -> bool:
+    value = value.strip()
+    return value.startswith(("http://", "https://"))
+
+
+def public_base_url(site: dict) -> str | None:
+    base_url = str(site.get("base_url", "") or "").strip().rstrip("/")
+    site_url = str(site.get("site_url", "") or "").strip().rstrip("/")
+
+    if is_absolute_url(base_url):
+        return base_url
+
+    if not site_url:
+        return None
+
+    if base_url and not base_url.startswith("/"):
+        base_url = "/" + base_url
+    return f"{site_url}{base_url}"
+
+
+def public_path_prefix(site: dict) -> str:
+    base_url = str(site.get("base_url", "") or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    if is_absolute_url(base_url):
+        return ""
+    return base_url if base_url.startswith("/") else f"/{base_url}"
+
+
+def join_relative_url(prefix: str, path: str) -> str:
+    prefix = prefix.rstrip("/")
+    path = path.lstrip("/")
+    if not path:
+        return f"{prefix}/" if prefix else "/"
+    if not prefix or prefix == ".":
+        return f"{prefix}/{path}" if prefix else f"/{path}"
+    return f"{prefix}/{path}"
+
+
+def join_absolute_url(base: str, path: str) -> str:
+    return urljoin(base.rstrip("/") + "/", path.lstrip("/"))
+
+
+def normalize_meta_text(value: str) -> str:
+    return re.sub(r"\s+", " ", value or "").strip()
+
+
 def render_page(env: Environment, template_name: str, output_path: Path, context: dict) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     base_url = context["site"].get("base_url", "")
     assets_prefix = compute_assets_prefix(output_path, base_url)
+    page_path = str(context.get("page_path", "") or "")
+    page_description = normalize_meta_text(
+        str(context.get("page_description") or context["site"].get("description") or "")
+    )
+    og_type = str(context.get("og_type", "website") or "website")
+    og_image_path = str(context.get("og_image_path") or "") or None
+
+    absolute_base = public_base_url(context["site"])
+    if absolute_base:
+        canonical_url = join_absolute_url(absolute_base, page_path)
+        page_url = canonical_url
+        if og_image_path and is_absolute_url(og_image_path):
+            og_image_url = og_image_path
+        else:
+            og_image_url = (
+                join_absolute_url(absolute_base, og_image_path) if og_image_path else None
+            )
+    else:
+        prefix = public_path_prefix(context["site"])
+        canonical_url = join_relative_url(prefix, page_path)
+        page_url = canonical_url
+        if og_image_path and is_absolute_url(og_image_path):
+            og_image_url = og_image_path
+        else:
+            og_image_url = join_relative_url(prefix, og_image_path) if og_image_path else None
+
     template = env.get_template(template_name)
-    html = template.render(**context, assets_prefix=assets_prefix)
+    render_context = dict(context)
+    render_context.update(
+        assets_prefix=assets_prefix,
+        canonical_url=canonical_url,
+        page_url=page_url,
+        page_description=page_description,
+        og_type=og_type,
+        og_image_url=og_image_url,
+        twitter_card="summary_large_image" if og_image_url else "summary",
+    )
+    html = template.render(**render_context)
     output_path.write_text(html, encoding="utf-8")
 
 
@@ -307,9 +434,12 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
         return DIST_DIR / "page" / str(page_number) / "index.html"
 
     def rel_link(from_output: Path, to_output: Path) -> str:
-        rel = os.path.relpath(to_output, from_output.parent)
+        target = to_output.parent if to_output.name == "index.html" else to_output
+        rel = os.path.relpath(target, from_output.parent)
         rel_posix = Path(rel).as_posix()
-        return rel_posix if rel_posix else "./"
+        if not rel_posix or rel_posix == ".":
+            return "./" if to_output.name == "index.html" else rel_posix
+        return f"{rel_posix.rstrip('/')}/" if to_output.name == "index.html" else rel_posix
 
     total_pages = max(1, math.ceil(len(posts_list) / POSTS_PER_PAGE))
     for page_num in range(1, total_pages + 1):
@@ -330,6 +460,14 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
 
         index_context = {
             "page_title": site["title"] if page_num == 1 else f"{site['title']} — Page {page_num}",
+            "page_path": "" if page_num == 1 else f"page/{page_num}/",
+            "page_description": site.get("description", ""),
+            "og_type": "website",
+            "og_image_path": (
+                (page_posts[0].images_meta[0].primary_src or page_posts[0].images_meta[0].path)
+                if page_posts and page_posts[0].images_meta
+                else None
+            ),
             "posts": page_posts,
             "site": site,
             "now": now,
@@ -338,17 +476,118 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
         }
         render_page(env, "index.html", page_output_path(page_num), index_context)
 
+    def infer_post_description(post: Post) -> str:
+        if post.excerpt:
+            return post.excerpt
+        if post.title:
+            return post.title
+        if post.body_html:
+            text = re.sub(r"<[^>]+>", " ", post.body_html)
+            text = normalize_meta_text(text)
+            if text:
+                return text[:160].rstrip()
+        return str(site.get("description", "") or "")
+
     for post in posts_list:
         out_dir = DIST_DIR / str(post.date.year) / f"{post.date.month:02d}" / post.slug
         output_file = out_dir / "index.html"
         context = {
             "page_title": f"{post.title or 'Post'} — {site['title']}",
+            "page_path": post.url,
+            "page_description": infer_post_description(post),
+            "og_type": "article",
+            "og_image_path": (
+                (post.images_meta[0].primary_src or post.images_meta[0].path)
+                if post.images_meta
+                else None
+            ),
             "post": post,
             "site": site,
             "now": now,
             "inline_style": site["inline_style"],
         }
         render_page(env, "post.html", output_file, context)
+
+
+def write_sitemap(posts: list[Post], site: dict) -> None:
+    absolute_base = public_base_url(site)
+    prefix = public_path_prefix(site)
+
+    def loc(path: str) -> str:
+        if absolute_base:
+            return join_absolute_url(absolute_base, path)
+        return join_relative_url(prefix, path)
+
+    def asset_url(path: str) -> str | None:
+        if not path:
+            return None
+        if is_absolute_url(path):
+            return path
+        candidate = Path(path)
+        if candidate.is_absolute():
+            return None
+        return loc(candidate.as_posix())
+
+    total_pages = max(1, math.ceil(len(posts) / POSTS_PER_PAGE))
+    newest_post = posts[0] if posts else None
+    lastmod_feed = newest_post.date.isoformat() if newest_post else None
+
+    sitemap_ns = "http://www.sitemaps.org/schemas/sitemap/0.9"
+    image_ns = "http://www.google.com/schemas/sitemap-image/1.1"
+    ET.register_namespace("", sitemap_ns)
+    ET.register_namespace("image", image_ns)
+    urlset = ET.Element(f"{{{sitemap_ns}}}urlset")
+
+    def add_url(path: str, lastmod: str | None = None, images: list[str] | None = None) -> None:
+        url_el = ET.SubElement(urlset, f"{{{sitemap_ns}}}url")
+        loc_el = ET.SubElement(url_el, f"{{{sitemap_ns}}}loc")
+        loc_el.text = loc(path)
+        if lastmod:
+            lastmod_el = ET.SubElement(url_el, f"{{{sitemap_ns}}}lastmod")
+            lastmod_el.text = lastmod
+        for image_loc in images or []:
+            image_el = ET.SubElement(url_el, f"{{{image_ns}}}image")
+            image_loc_el = ET.SubElement(image_el, f"{{{image_ns}}}loc")
+            image_loc_el.text = image_loc
+
+    add_url("", lastmod=lastmod_feed)
+    for page_num in range(2, total_pages + 1):
+        add_url(f"page/{page_num}/", lastmod=lastmod_feed)
+
+    for post in posts:
+        images: list[str] = []
+        for meta in post.images_meta:
+            image_loc = asset_url(meta.path)
+            if image_loc:
+                images.append(image_loc)
+        add_url(post.url, lastmod=post.date.isoformat(), images=images or None)
+
+    sitemap_path = DIST_DIR / "sitemap.xml"
+    tree = ET.ElementTree(urlset)
+    ET.indent(tree, space="  ")
+    tree.write(sitemap_path, encoding="utf-8", xml_declaration=True)
+    sitemap_path.write_text(
+        sitemap_path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8"
+    )
+
+
+def rewrite_dist_robots(site: dict) -> None:
+    robots_path = DIST_DIR / "robots.txt"
+    if not robots_path.exists():
+        return
+
+    lines = robots_path.read_text(encoding="utf-8").splitlines()
+    lines = [line for line in lines if not line.strip().lower().startswith("sitemap:")]
+
+    absolute_base = public_base_url(site)
+    if absolute_base:
+        sitemap_url = join_absolute_url(absolute_base, "sitemap.xml")
+    else:
+        sitemap_url = join_relative_url(public_path_prefix(site), "sitemap.xml")
+
+    lines.append("")
+    lines.append(f"Sitemap: {sitemap_url}")
+    robots_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -373,6 +612,8 @@ def main(argv: list[str] | None = None) -> int:
     attach_image_meta(posts)
     env = make_env()
     build(posts, site, env)
+    write_sitemap(posts, site)
+    rewrite_dist_robots(site)
 
     try:
         rel = DIST_DIR.relative_to(Path.cwd())
