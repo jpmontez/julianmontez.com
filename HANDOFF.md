@@ -11,6 +11,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Generator now reads static image dimensions (JPEG/PNG via Pillow) and emits width/height on `<img>` tags in index/post templates; `<main role="main">` added around primary content to satisfy accessibility/landmark checks.
 - Generator now creates responsive raster variants (480/720/1080 widths where applicable) and emits `srcset`/`sizes`; first image on feed/post pages remains eager with `fetchpriority="high"` and optional preload, others stay lazy.
 - Generator enables Jinja2 autoescape and emits canonical + basic OpenGraph meta tags on pages; it also writes `dist/sitemap.xml` and keeps `dist/robots.txt` pointed at it.
+- `blog/config.toml` now sets `site_url` to emit fully-qualified canonical/OG URLs and absolute sitemap locs (fixes PageSpeed/Lighthouse `rel=canonical` absolute-URL audit).
 - Posts can define per-image alt text via TOML front matter (e.g. `images = [{ src = "static/...", alt = "..." }]`); templates use it for `<img alt="">`.
 - CI/CD: GitHub Actions workflow at `.github/workflows/deploy.yml` builds with uv and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`); runs on main, PRs, schedule, and manual triggers.
 - Favicon: `blog/favicon.png` is copied to `dist` and linked in `base.html`.
@@ -24,11 +25,11 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.
 - PageSpeed (mobile): now scoring 100/100 for Performance, Accessibility, Best Practices, and SEO after responsive variants/srcset and LCP prioritization changes (no preload). Monitor for regressions.
 - New dependency: Pillow for reading intrinsic image dimensions during generation; ensure environments install it (`uv sync`) before running the generator.
-- For absolute canonical/OG URLs and absolute sitemap locs, set `site_url` in `blog/config.toml` (otherwise paths are emitted as absolute-path URLs like `/YYYY/MM/slug/`).
+- Ensure `site_url` remains accurate for the canonical domain (used for canonical/OG tags and sitemap locs).
 
 # Next Steps (Actionable)
 1) Implement gallery/lightbox for multi-image posts on per-post pages (`blog/templates/post.html`, `blog/theme.css`, potentially JS if added). Reference TODO.md.
-2) Set `site_url` in `blog/config.toml` before deploying if you want fully-qualified sitemap/canonical URLs.
+2) If hosting under a subpath, set `base_url` in `blog/config.toml` so asset links resolve correctly.
 3) Monitor the Pages workflow on first runs; verify the deployed site renders correctly and adjust caching/paths if needed.
 Run `uv run generate-blog` after changes; check `blog/dist` output.
 

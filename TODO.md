@@ -7,6 +7,7 @@
   - This would only be utilized in a dedicated post page.
 
 Completed (keep below active items):
+- ~~Fix canonical URLs to be absolute (set `site_url` in `blog/config.toml`) to satisfy the Lighthouse/PageSpeed `rel=canonical` audit.~~
 - ~~Add per-image alt text support (front matter + templates) and populate alts for existing posts.~~
 - ~~Fix `attach_image_meta()` caching for repeated image paths (was reusing a stale `candidate` and could generate incorrect `primary_src`).~~
 - ~~Enable Jinja2 autoescape in `blog/generate.py` and ensure templates only mark trusted HTML as safe.~~
