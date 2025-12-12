@@ -576,17 +576,25 @@ def rewrite_dist_robots(site: dict) -> None:
     if not robots_path.exists():
         return
 
-    lines = robots_path.read_text(encoding="utf-8").splitlines()
-    lines = [line for line in lines if not line.strip().lower().startswith("sitemap:")]
-
     absolute_base = public_base_url(site)
+    raw_lines = robots_path.read_text(encoding="utf-8").splitlines()
+    existing_sitemaps: list[str] = []
+    lines: list[str] = []
+    for line in raw_lines:
+        stripped = line.strip()
+        if stripped.lower().startswith("sitemap:"):
+            existing_sitemaps.append(stripped.split(":", 1)[1].strip())
+        else:
+            lines.append(line)
+
     if absolute_base:
         sitemap_url = join_absolute_url(absolute_base, "sitemap.xml")
     else:
-        sitemap_url = join_relative_url(public_path_prefix(site), "sitemap.xml")
+        sitemap_url = next((url for url in existing_sitemaps if is_absolute_url(url)), "")
 
-    lines.append("")
-    lines.append(f"Sitemap: {sitemap_url}")
+    if sitemap_url:
+        lines.append("")
+        lines.append(f"Sitemap: {sitemap_url}")
     robots_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
