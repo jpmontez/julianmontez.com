@@ -16,15 +16,21 @@ Generate the site:
 uv run generate-blog
 ```
 
+Run unit tests:
+```bash
+make test
+```
+
 Preview locally:
 ```bash
-cd blog/dist && python -m http.server 8000
+make preview  # serves blog/dist on http://localhost:8080
 ```
+`make preview` sets `site_url` to `http://localhost:8080` so feed self-links validate against the local server; override with `PREVIEW_URL` and `PREVIEW_PORT`.
 
 Deploy: CI builds with GitHub Actions and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`).
 
 ## Writing posts
-Add Markdown files under `blog/posts/YYYY/MM/slug.md` with TOML front matter wrapped by `++++` lines:
+Add Markdown files under `blog/posts/YYYY/MM/slug.md` with TOML front matter wrapped by `+++` or `++++` lines:
 ```markdown
 +++
 title = "Brooklyn Night Rain"
@@ -44,6 +50,8 @@ Full Markdown body here. Links like [GitHub Pages](https://pages.github.com/) wo
 - `site_url` (optional): your public origin (e.g. `https://julianmontez.com`) to emit absolute canonical/OG URLs and absolute sitemap locs.
 - `base_url` (optional): a path prefix if publishing under a subpath (e.g. `/julianmontez.com/blog`).
 - `eager_images` (optional, default: 2): how many top-of-page images load eagerly; the generator applies `fetchpriority="high"` + preload to the likely mobile LCP image among them.
+- `feed_max_posts` (optional, default: 25): how many posts to include in Atom/RSS feeds (0 disables entries).
+- `feed_self_url` (optional): override the base URL used for feed `rel="self"` links (useful for previews or proxies).
 
 ## Assets
 - Place photos in `blog/static/`; they are copied to `dist/static/`.
@@ -51,4 +59,4 @@ Full Markdown body here. Links like [GitHub Pages](https://pages.github.com/) wo
 - Theme styles live in `blog/theme.css` and are inlined into each page (also emitted as `dist/style.css`, currently unused). Google Fonts import removed to avoid render-blocking.
 - Layout is fully center-aligned, with the title 64px from the top and 36px above the tagline.
 - Images below the fold are lazy-loaded (`loading="lazy"`, `decoding="async"`). Posts render at `/YYYY/MM/slug/` (directory-style `index.html` inside).
-- Generator writes `dist/sitemap.xml` and ensures `dist/robots.txt` points at it.
+- Generator writes `dist/sitemap.xml`, `dist/feed.xml` (Atom), `dist/rss.xml` (RSS), and ensures `dist/robots.txt` points at the sitemap.

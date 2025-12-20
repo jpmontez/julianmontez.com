@@ -11,10 +11,11 @@ Static Tumblr-style microblog generated with Python and uv. The generator builds
 ## Makefile shortcuts
 - `make install`: install deps with uv.
 - `make build`: install then run the generator.
-- `make preview`: build, then serve `blog/dist` on port 8080.
+- `make preview`: generate with `site_url` set to `http://localhost:8080` (override via `PREVIEW_URL`), then serve `blog/dist` on port 8080 (override via `PREVIEW_PORT`).
 - `make clean` / `make distclean`: remove `blog/dist`; `distclean` also removes `.uv`/`.venv`.
 - `make import [LIGHTROOM_EXPORT_DIR=~/Desktop]`: import Lightroom exports via `scripts/import_lightroom.py`.
 - `make format` / `make lint` / `make check`: Ruff format, check, or both.
+- `make test`: run unit tests.
 - `make regen`: clean then build.
 
 ## Import Lightroom photos
@@ -37,9 +38,10 @@ Static Tumblr-style microblog generated with Python and uv. The generator builds
 - Entrypoint: `blog/generate.py` (also exposed as the `generate-blog` script).
 - Templates: `blog/templates/index.html` (feed with pagination) and `blog/templates/post.html` (per-post pages).
 - Styling: `blog/theme.css` is inlined into each page on build (also emitted as `dist/style.css`, currently unused); monochrome/centered Tumblr-inspired layout with lazy-loaded images.
-- Config: `blog/config.toml` (title, tagline, description, optional `site_url` for absolute canonical/sitemap URLs, optional `base_url` for subpath hosting).
+- Config: `blog/config.toml` (title, tagline, description, optional `site_url` for absolute canonical/sitemap URLs, optional `base_url` for subpath hosting, optional `feed_max_posts` to cap RSS/Atom entries, optional `feed_self_url` to override feed self links).
 - Content: `blog/posts/YYYY/MM/` Markdown with TOML front matter; assets in `blog/static/` are copied to `dist/static/`.
 - Output: `blog/dist/` with `index.html`, `sitemap.xml`, `robots.txt`, paginated feeds (`/page/N/`), and per-post pages at `/YYYY/MM/slug/` (directory-style `index.html` inside each slug).
+- Feeds: `blog/dist/feed.xml` (Atom) and `blog/dist/rss.xml` (RSS).
 - Images: generator reads intrinsic dimensions, emits responsive variants (480/720/1080 where smaller than original) with `srcset`/`sizes`, eagerly loads the first `eager_images` images (default: 2), and applies `fetchpriority="high"` + a preload directive to the likely mobile LCP image among them.
 
 ## Writing posts

@@ -7,6 +7,7 @@
   - This would only be utilized in a dedicated post page.
 
 Completed (keep below active items):
+- ~~Add RSS/Atom feeds plus `<link rel="alternate">` headers.~~
 - ~~Fix `robots.txt` sitemap directive to always be absolute (or omitted) to satisfy Lighthouse/PageSpeed validation.~~
 - ~~Fix canonical URLs to be absolute (set `site_url` in `blog/config.toml`) to satisfy the Lighthouse/PageSpeed `rel=canonical` audit.~~
 - ~~Add per-image alt text support (front matter + templates) and populate alts for existing posts.~~

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import email.utils
+import html
 import math
 import os
 import re
@@ -10,7 +12,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree as ET
 
 import tomllib
@@ -38,6 +40,7 @@ TEMPLATES_DIR = ROOT / "templates"
 POSTS_PER_PAGE = 10
 RESPONSIVE_WIDTHS = [480, 720, 1080]
 IMAGE_SIZES_ATTR = "(max-width: 720px) 100vw, 520px"
+FEED_MAX_POSTS_DEFAULT = 25
 
 
 @dataclass
@@ -182,6 +185,8 @@ def load_config(path: Path) -> dict:
         "base_url": "",
         "site_url": "",
         "eager_images": 2,
+        "feed_max_posts": FEED_MAX_POSTS_DEFAULT,
+        "feed_self_url": "",
     }
     defaults.update(data)
     return defaults
@@ -404,6 +409,20 @@ def join_relative_url(prefix: str, path: str) -> str:
 
 def join_absolute_url(base: str, path: str) -> str:
     return urljoin(base.rstrip("/") + "/", path.lstrip("/"))
+
+
+def feed_self_url(site: dict, path: str) -> str:
+    explicit = str(site.get("feed_self_url", "") or "").strip()
+    if explicit:
+        if is_absolute_url(explicit):
+            return join_absolute_url(explicit, path)
+        return join_relative_url(explicit, path)
+
+    absolute_base = public_base_url(site)
+    if absolute_base:
+        return join_absolute_url(absolute_base, path)
+    prefix = public_path_prefix(site)
+    return join_relative_url(prefix, path)
 
 
 def normalize_meta_text(value: str) -> str:
@@ -654,6 +673,177 @@ def rewrite_dist_robots(site: dict) -> None:
     robots_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
+def format_rfc3339(value: dt.date | dt.datetime) -> str:
+    if isinstance(value, dt.date) and not isinstance(value, dt.datetime):
+        value = dt.datetime(value.year, value.month, value.day, tzinfo=dt.timezone.utc)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=dt.timezone.utc)
+    return value.astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def format_rfc822(value: dt.date | dt.datetime) -> str:
+    if isinstance(value, dt.date) and not isinstance(value, dt.datetime):
+        value = dt.datetime(value.year, value.month, value.day, tzinfo=dt.timezone.utc)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=dt.timezone.utc)
+    return email.utils.format_datetime(value.astimezone(dt.timezone.utc), usegmt=True)
+
+
+def feed_post_title(post: Post) -> str:
+    return str(post.title or post.display_date or post.slug or "Post")
+
+
+def render_feed_post_html(post: Post, site: dict) -> str:
+    absolute_base = public_base_url(site)
+    prefix = public_path_prefix(site)
+
+    def asset_url(path: str) -> str | None:
+        if not path:
+            return None
+        if is_absolute_url(path):
+            return path
+        candidate = Path(path)
+        if candidate.is_absolute():
+            return None
+        if absolute_base:
+            return join_absolute_url(absolute_base, candidate.as_posix())
+        return join_relative_url(prefix, candidate.as_posix())
+
+    parts: list[str] = []
+    for meta in post.images_meta:
+        src = asset_url(image_src(meta))
+        if not src:
+            continue
+        alt = meta.alt if meta.alt is not None else (post.title or "Photo")
+        alt = html.escape(str(alt), quote=True)
+        src = html.escape(str(src), quote=True)
+        width_attr = f' width="{meta.width}"' if meta.width else ""
+        height_attr = f' height="{meta.height}"' if meta.height else ""
+        parts.append(f'<p><img src="{src}" alt="{alt}"{width_attr}{height_attr} /></p>')
+
+    if post.excerpt:
+        parts.append(f"<p>{html.escape(str(post.excerpt))}</p>")
+    if post.body_html:
+        parts.append(post.body_html)
+    return "\n".join(parts).strip()
+
+
+def write_atom_feed(posts: list[Post], site: dict) -> None:
+    max_posts = max(0, int(site.get("feed_max_posts", FEED_MAX_POSTS_DEFAULT) or 0))
+    feed_posts = posts[:max_posts] if max_posts else []
+
+    absolute_base = public_base_url(site)
+    prefix = public_path_prefix(site)
+
+    def loc(path: str) -> str:
+        if absolute_base:
+            return join_absolute_url(absolute_base, path)
+        return join_relative_url(prefix, path)
+
+    atom_ns = "http://www.w3.org/2005/Atom"
+    ET.register_namespace("", atom_ns)
+    feed_el = ET.Element(f"{{{atom_ns}}}feed")
+
+    ET.SubElement(feed_el, f"{{{atom_ns}}}title").text = str(site.get("title", "Microblog") or "")
+    ET.SubElement(feed_el, f"{{{atom_ns}}}id").text = loc("")
+    ET.SubElement(feed_el, f"{{{atom_ns}}}link", {"href": loc("")})
+    ET.SubElement(
+        feed_el,
+        f"{{{atom_ns}}}link",
+        {"href": feed_self_url(site, "feed.xml"), "rel": "self", "type": "application/atom+xml"},
+    )
+
+    newest = feed_posts[0].date if feed_posts else dt.datetime.now(dt.timezone.utc)
+    ET.SubElement(feed_el, f"{{{atom_ns}}}updated").text = format_rfc3339(newest)
+
+    author = str(site.get("author", "") or "").strip()
+    if author:
+        author_el = ET.SubElement(feed_el, f"{{{atom_ns}}}author")
+        ET.SubElement(author_el, f"{{{atom_ns}}}name").text = author
+
+    for post in feed_posts:
+        entry_el = ET.SubElement(feed_el, f"{{{atom_ns}}}entry")
+        post_url = loc(post.url)
+
+        ET.SubElement(entry_el, f"{{{atom_ns}}}title").text = feed_post_title(post)
+        ET.SubElement(entry_el, f"{{{atom_ns}}}id").text = post_url
+        ET.SubElement(entry_el, f"{{{atom_ns}}}link", {"href": post_url})
+        ET.SubElement(entry_el, f"{{{atom_ns}}}updated").text = format_rfc3339(post.date)
+        ET.SubElement(entry_el, f"{{{atom_ns}}}published").text = format_rfc3339(post.date)
+
+        summary = normalize_meta_text(str(post.excerpt or post.title or ""))
+        if summary:
+            summary_el = ET.SubElement(entry_el, f"{{{atom_ns}}}summary", {"type": "html"})
+            summary_el.text = summary
+
+        content_html = render_feed_post_html(post, site)
+        if content_html:
+            content_el = ET.SubElement(entry_el, f"{{{atom_ns}}}content", {"type": "html"})
+            content_el.text = content_html
+
+    feed_path = DIST_DIR / "feed.xml"
+    tree = ET.ElementTree(feed_el)
+    ET.indent(tree, space="  ")
+    tree.write(feed_path, encoding="utf-8", xml_declaration=True)
+    feed_path.write_text(feed_path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8")
+
+
+def write_rss_feed(posts: list[Post], site: dict) -> None:
+    max_posts = max(0, int(site.get("feed_max_posts", FEED_MAX_POSTS_DEFAULT) or 0))
+    feed_posts = posts[:max_posts] if max_posts else []
+
+    absolute_base = public_base_url(site)
+    prefix = public_path_prefix(site)
+
+    def loc(path: str) -> str:
+        if absolute_base:
+            return join_absolute_url(absolute_base, path)
+        return join_relative_url(prefix, path)
+
+    atom_ns = "http://www.w3.org/2005/Atom"
+    ET.register_namespace("atom", atom_ns)
+
+    rss_root = ET.Element("rss", {"version": "2.0"})
+    channel = ET.SubElement(rss_root, "channel")
+
+    ET.SubElement(channel, "title").text = str(site.get("title", "Microblog") or "")
+    ET.SubElement(channel, "link").text = loc("")
+    ET.SubElement(
+        channel,
+        f"{{{atom_ns}}}link",
+        {"href": feed_self_url(site, "rss.xml"), "rel": "self", "type": "application/rss+xml"},
+    )
+    ET.SubElement(channel, "description").text = str(site.get("description", "") or "")
+    ET.SubElement(channel, "lastBuildDate").text = format_rfc822(
+        feed_posts[0].date if feed_posts else dt.datetime.now(dt.timezone.utc)
+    )
+
+    for post in feed_posts:
+        item = ET.SubElement(channel, "item")
+        post_url = loc(post.url)
+        ET.SubElement(item, "title").text = feed_post_title(post)
+        ET.SubElement(item, "link").text = post_url
+        guid = ET.SubElement(item, "guid", {"isPermaLink": "true"})
+        guid.text = post_url
+        ET.SubElement(item, "pubDate").text = format_rfc822(post.date)
+
+        description = render_feed_post_html(post, site)
+        if not description:
+            description = normalize_meta_text(str(post.excerpt or post.title or "")) or post_url
+        ET.SubElement(item, "description").text = description
+
+    rss_path = DIST_DIR / "rss.xml"
+    tree = ET.ElementTree(rss_root)
+    ET.indent(tree, space="  ")
+    tree.write(rss_path, encoding="utf-8", xml_declaration=True)
+    rss_path.write_text(rss_path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8")
+
+
+def write_feeds(posts: list[Post], site: dict) -> None:
+    write_atom_feed(posts, site)
+    write_rss_feed(posts, site)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate the static microblog")
     parser.add_argument(
@@ -662,12 +852,36 @@ def main(argv: list[str] | None = None) -> int:
         default=ROOT / "config.toml",
         help="Path to site config (TOML)",
     )
+    parser.add_argument(
+        "--site-url",
+        default=None,
+        help=(
+            "Override site_url for absolute canonical/sitemap/feed URLs "
+            "(e.g. http://localhost:8080)."
+        ),
+    )
+    parser.add_argument(
+        "--base-url",
+        default=None,
+        help="Override base_url (path prefix or absolute URL) for published links.",
+    )
+    parser.add_argument(
+        "--feed-self-url",
+        default=None,
+        help="Override base URL used for feed self links (e.g. http://localhost:8080).",
+    )
     args = parser.parse_args(argv)
 
     if not args.config.exists():
         raise SystemExit(f"Config not found: {args.config}")
 
     site = load_config(args.config)
+    if args.site_url is not None:
+        site["site_url"] = str(args.site_url)
+    if args.base_url is not None:
+        site["base_url"] = str(args.base_url)
+    if args.feed_self_url is not None:
+        site["feed_self_url"] = str(args.feed_self_url)
     site["inline_style"] = (ROOT / "theme.css").read_text(encoding="utf-8")
     ensure_empty_dir(DIST_DIR)
     copy_assets()
@@ -678,6 +892,7 @@ def main(argv: list[str] | None = None) -> int:
     build(posts, site, env)
     write_sitemap(posts, site)
     rewrite_dist_robots(site)
+    write_feeds(posts, site)
 
     try:
         rel = DIST_DIR.relative_to(Path.cwd())

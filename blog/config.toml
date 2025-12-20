@@ -12,3 +12,8 @@ base_url = ""
 # `loading="lazy"`). The generator picks the likely LCP image among these and applies
 # `fetchpriority="high"` + a preload directive.
 eager_images = 2
+# feed_max_posts controls how many posts appear in Atom/RSS feeds (0 disables entries).
+feed_max_posts = 25
+# feed_self_url overrides the base URL used in Atom/RSS rel="self" links.
+# Leave empty to derive from site_url.
+feed_self_url = ""

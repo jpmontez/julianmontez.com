@@ -11,6 +11,8 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Generator now reads static image dimensions (JPEG/PNG via Pillow) and emits width/height on `<img>` tags in index/post templates; `<main role="main">` added around primary content to satisfy accessibility/landmark checks.
 - Generator now creates responsive raster variants (480/720/1080 widths where applicable) and emits `srcset`/`sizes`; the first `eager_images` images (default: 2) load eagerly, and the generator picks the likely mobile LCP image among them for `fetchpriority="high"` + a preload directive.
 - Generator enables Jinja2 autoescape and emits canonical + basic OpenGraph meta tags on pages; it also writes `dist/sitemap.xml` and keeps `dist/robots.txt` pointed at it.
+- Generator writes `dist/feed.xml` (Atom) and `dist/rss.xml` (RSS); `blog/templates/base.html` advertises both via `<link rel="alternate">`.
+- Feed self links default to absolute URLs derived from `site_url`; override with `feed_self_url` for preview/proxy setups.
 - `blog/config.toml` now sets `site_url` to emit fully-qualified canonical/OG URLs and absolute sitemap locs (fixes PageSpeed/Lighthouse `rel=canonical` absolute-URL audit).
 - Generator now ensures the `Sitemap:` directive in `dist/robots.txt` is always absolute (or omitted if an absolute base URL can't be determined), to satisfy Lighthouse/PageSpeed validation.
 - Posts can define per-image alt text via TOML front matter (e.g. `images = [{ src = "static/...", alt = "..." }]`); templates use it for `<img alt="">`.
@@ -21,6 +23,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Images now load lazily (`loading="lazy"`, `decoding="async"`) in index and post templates for performance.
 - CSS is now inlined from `theme.css` (and Google Fonts import removed) to avoid render-blocking requests; `style.css` is still written but not referenced.
 - Helper script: `scripts/import_lightroom.py` scans `~/Desktop` for Lightroom JPG exports (`YYYYMMDD-DSC_NNNN.jpg`), copies them into `blog/static/`, and scaffolds `blog/posts/YYYY/MM/*.md` with the photo front matter; prompts for a custom slug when multiple photos share a date; prompts before overwriting an existing asset (pass `--overwrite` to force); uses logging; originals on Desktop stay untouched.
+- Preview: `make preview` sets `site_url` + `feed_self_url` to `http://localhost:8080` (override via `PREVIEW_URL`) and serves on `PREVIEW_PORT`.
 
 # Open Challenges & Risks
 - TODO.md tracks future work (gallery view for multi-photo posts). Gallery view is not implemented; current multi-image rendering simply stacks images.
@@ -38,8 +41,8 @@ Run `uv run generate-blog` after changes; check `blog/dist` output.
 - Python 3.11+; package manager: uv (`uv sync`).
 - Entrypoints: `uv run generate-blog` (or `uv run python blog/generate.py`).
 - Lint/format: `uv run ruff format` then `uv run ruff check`.
-- Config: `blog/config.toml` (title, tagline, description, optional `site_url` for absolute canonical/sitemap URLs, optional `base_url` for correct asset linking when hosted).
-- Makefile: `make install` (uv sync), `make build` (install + generate), `make preview` (serve `blog/dist` on :8080 after build), `make clean`/`distclean` (remove `blog/dist`; `distclean` also removes `.uv`/`.venv`), `make import [LIGHTROOM_EXPORT_DIR=~/Desktop]` (run import script), `make format`/`lint`/`check` (Ruff), `make regen` (clean + build).
+- Config: `blog/config.toml` (title, tagline, description, optional `site_url` for absolute canonical/sitemap URLs, optional `base_url` for correct asset linking when hosted, optional `feed_max_posts` to cap feed entries, optional `feed_self_url` for feed self-link overrides).
+- Makefile: `make install` (uv sync), `make build` (install + generate), `make preview` (generate with `PREVIEW_URL`, then serve `blog/dist` on `PREVIEW_PORT`), `make clean`/`distclean` (remove `blog/dist`; `distclean` also removes `.uv`/`.venv`), `make import [LIGHTROOM_EXPORT_DIR=~/Desktop]` (run import script), `make format`/`lint`/`check` (Ruff), `make test` (unit tests), `make regen` (clean + build).
 
 # Data, Artifacts & Contracts
 - Content: `blog/posts/YYYY/MM/*.md` with dated filenames (e.g., `2025-01-20-post-01.md`), TOML front matter with `title`, `date` (ISO), `images` (list of paths under `static/`), optional `excerpt`, `layout`.
@@ -47,8 +50,8 @@ Run `uv run generate-blog` after changes; check `blog/dist` output.
 - Output: `blog/dist/` (rebuilt by generator). Pagination lives under `blog/dist/page/N/`; posts under `blog/dist/YYYY/MM/slug/`.
 
 # Testing & Quality
-- No automated tests; rely on generator run and browser preview.
-- Commands: `uv run generate-blog`; `uv run ruff format`; `uv run ruff check`.
+- Unit tests exist (feed generation coverage) under `tests/`; run with `make test`.
+- Commands: `uv run generate-blog`; `uv run ruff format`; `uv run ruff check`; `make test`.
 
 # Gotchas & Conventions
 - Front matter delimiter must be `+++` or `++++`; dates must be ISO (`YYYY-MM-DD`).
