@@ -3,8 +3,12 @@
 - Fix mobile LCP and responsive images: verified via PageSpeed (100/100 Perf/Access/Best Practices/SEO). Keep an eye on future regressions.
   - Generator creates multiple widths for raster assets and emits `srcset`/`sizes`; the first `eager_images` images load eagerly and the likely mobile LCP image among them gets `fetchpriority="high"` + a preload directive.
   - Keep Lightroom workflow simple (single export); adjust widths/quality only if future audits regress.
+- Improve readability/accessibility in the theme (link + focus-visible styles done; bump base font size and reconsider all-caps still needed).
+- Make post titles/images clickable and add semantic headings/navigation landmarks (`h1`/`h2`, `nav` with `aria-label`) in templates.
+- Improve post page `<title>` fallback when posts lack titles (use date or excerpt instead of the generic “Post”).
+- Expand social sharing meta tags (Twitter title/description/image) for richer previews.
 - Add a gallery view for multi-photo posts.
-  - This would only be utilized in a dedicated post page.
+  - Prototype horizontal scroll added to post page; verify layout and interaction before finalizing.
 
 Completed (keep below active items):
 - ~~Add RSS/Atom feeds plus `<link rel="alternate">` headers.~~

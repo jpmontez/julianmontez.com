@@ -9,6 +9,8 @@
     </div>
 
     {% if post.images_meta %}
+      {% set is_gallery = post.images_meta | length > 1 %}
+      {% if is_gallery %}<div class="gallery">{% endif %}
       {% for image in post.images_meta %}
         {% set image_id = image.primary_src or image.path %}
         {% set is_eager = image_id in eager_image_ids %}
@@ -30,6 +32,7 @@
           />
         </figure>
       {% endfor %}
+      {% if is_gallery %}</div>{% endif %}
     {% endif %}
 
     {% if post.excerpt %}

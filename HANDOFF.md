@@ -22,6 +22,9 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - URLs: Feed and post links omit `index.html`; posts publish as directory-style `YYYY/MM/slug/` (index.html inside). Back-to-feed/pagination use trailing slashes.
 - Images now load lazily (`loading="lazy"`, `decoding="async"`) in index and post templates for performance.
 - CSS is now inlined from `theme.css` (and Google Fonts import removed) to avoid render-blocking requests; `style.css` is still written but not referenced.
+- Theme now underlines links by default and adds `:focus-visible` outlines for keyboard navigation.
+- Post pages render multi-image posts as a horizontal scroll gallery with light padding between images; prototype lives in `blog/templates/post.html` + `blog/theme.css`.
+- Added a demo multi-image post for gallery testing at `blog/posts/2025/12/2025-12-07-gallery-test.md`.
 - Helper script: `scripts/import_lightroom.py` scans `~/Desktop` for Lightroom JPG exports (`YYYYMMDD-DSC_NNNN.jpg`), copies them into `blog/static/`, and scaffolds `blog/posts/YYYY/MM/*.md` with the photo front matter; prompts for a custom slug when multiple photos share a date; prompts before overwriting an existing asset (pass `--overwrite` to force); uses logging; originals on Desktop stay untouched.
 - Preview: `make preview` sets `site_url` + `feed_self_url` to `http://localhost:8080` (override via `PREVIEW_URL`) and serves on `PREVIEW_PORT`.
 
@@ -30,11 +33,18 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - PageSpeed (mobile): monitor for LCP regressions as new photos/content change which above-the-fold image becomes LCP; generator now applies eager loading + `fetchpriority` + preload to the likely LCP image.
 - New dependency: Pillow for reading intrinsic image dimensions during generation; ensure environments install it (`uv sync`) before running the generator.
 - Ensure `site_url` remains accurate for the canonical domain (used for canonical/OG tags and sitemap locs).
+- Current typography is very small (11px) with heavy uppercase usage; readability and accessibility may suffer, especially on mobile.
+- Post discoverability is low: titles/images aren’t links, and link affordance/focus styles are subtle; users may miss how to open a post page.
+- Semantic headings/navigation landmarks are minimal (`span`/`div` instead of `h1`/`h2` and `nav`), which can reduce SEO clarity and screen-reader navigation.
+- Post pages default to a generic “Post — {{ site.title }}” title when no post title is provided; this weakens SEO and social previews.
 
 # Next Steps (Actionable)
-1) Implement gallery/lightbox for multi-image posts on per-post pages (`blog/templates/post.html`, `blog/theme.css`, potentially JS if added). Reference TODO.md.
-2) If hosting under a subpath, set `base_url` in `blog/config.toml` so asset links resolve correctly.
-3) Monitor the Pages workflow on first runs; verify the deployed site renders correctly and adjust caching/paths if needed.
+1) Improve typography/accessibility: increase base font size, ease off all-caps where possible, and add clear link + `:focus-visible` styles (`blog/theme.css`).
+2) Make post titles/images clickable and add semantic headings + `nav` landmarks with `aria-label` (`blog/templates/index.html`, `blog/templates/post.html`, `blog/templates/base.html`).
+3) Update post page title fallback to use the post date or excerpt when no title is set (`blog/generate.py`).
+4) Implement gallery/lightbox for multi-image posts on per-post pages (`blog/templates/post.html`, `blog/theme.css`, potentially JS if added). Reference TODO.md.
+5) If hosting under a subpath, set `base_url` in `blog/config.toml` so asset links resolve correctly.
+6) Monitor the Pages workflow on first runs; verify the deployed site renders correctly and adjust caching/paths if needed.
 Run `uv run generate-blog` after changes; check `blog/dist` output.
 
 # Environment & Tooling

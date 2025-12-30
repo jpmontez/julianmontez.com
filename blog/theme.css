@@ -23,11 +23,27 @@ body {
 
 a {
   color: inherit;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgba(17, 17, 17, 0.35);
 }
 
 a:hover {
-  text-decoration: underline;
+  color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--accent);
+}
+
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 .page {
@@ -103,6 +119,35 @@ article.post {
   margin: 0 0 18px;
 }
 
+.post .gallery {
+  display: flex;
+  gap: 14px;
+  margin: 0 0 18px;
+  max-width: none;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px max(18px, calc((100vw - 520px) / 2)) 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  align-items: center;
+}
+
+.post .gallery::-webkit-scrollbar {
+  display: none;
+}
+
+.post .gallery figure {
+  margin: 0;
+  max-width: none;
+  flex: 0 0 auto;
+  width: min(520px, 100%);
+  scroll-snap-align: center;
+  display: flex;
+  align-items: center;
+}
+
 .post .body a {
   text-decoration: underline;
 }
@@ -144,6 +189,10 @@ article.post {
   }
 
   .post figure {
+    max-width: 100%;
+  }
+
+  .post .gallery {
     max-width: 100%;
   }
 
