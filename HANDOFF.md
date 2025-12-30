@@ -24,7 +24,6 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - CSS is now inlined from `theme.css` (and Google Fonts import removed) to avoid render-blocking requests; `style.css` is still written but not referenced.
 - Theme now underlines links by default and adds `:focus-visible` outlines for keyboard navigation.
 - Post pages render multi-image posts as a horizontal scroll gallery with light padding between images; prototype lives in `blog/templates/post.html` + `blog/theme.css`.
-- Added a demo multi-image post for gallery testing at `blog/posts/2025/12/2025-12-07-gallery-test.md`.
 - Helper script: `scripts/import_lightroom.py` scans `~/Desktop` for Lightroom JPG exports (`YYYYMMDD-DSC_NNNN.jpg`), copies them into `blog/static/`, and scaffolds `blog/posts/YYYY/MM/*.md` with the photo front matter; prompts for a custom slug when multiple photos share a date; prompts before overwriting an existing asset (pass `--overwrite` to force); uses logging; originals on Desktop stay untouched.
 - Preview: `make preview` sets `site_url` + `feed_self_url` to `http://localhost:8080` (override via `PREVIEW_URL`) and serves on `PREVIEW_PORT`.
 
