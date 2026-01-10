@@ -15,6 +15,7 @@ Static Tumblr-inspired microblog generator in Python (uv-managed). It builds a f
 - Feed self links default to absolute URLs derived from `site_url`; override with `feed_self_url` for preview/proxy setups.
 - `blog/config.toml` now sets `site_url` to emit fully-qualified canonical/OG URLs and absolute sitemap locs (fixes PageSpeed/Lighthouse `rel=canonical` absolute-URL audit).
 - Generator now ensures the `Sitemap:` directive in `dist/robots.txt` is always absolute (or omitted if an absolute base URL can't be determined), to satisfy Lighthouse/PageSpeed validation.
+- URL handling refactored into a shared `UrlContext` used by page rendering, feeds, sitemap generation, and `rewrite_dist_robots` to avoid duplicated base/prefix logic (behavior unchanged) — 2026-01-10.
 - Posts can define per-image alt text via TOML front matter (e.g. `images = [{ src = "static/...", alt = "..." }]`); templates use it for `<img alt="">`.
 - CI/CD: GitHub Actions workflow at `.github/workflows/deploy.yml` builds with uv and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`); runs on main, PRs, schedule, and manual triggers.
 - Favicon: `blog/favicon.png` is copied to `dist` and linked in `base.html`.
@@ -61,6 +62,7 @@ Run `uv run generate-blog` after changes; check `blog/dist` output.
 # Testing & Quality
 - Unit tests exist (feed generation coverage) under `tests/`; run with `make test`.
 - Commands: `uv run generate-blog`; `uv run ruff format`; `uv run ruff check`; `make test`.
+- 2026-01-10: `uv run ruff check` clean; `make test` (uv run python -m unittest discover -s tests) passing; `uv run generate-blog` completed (built 10 posts into `blog/dist`).
 
 # Gotchas & Conventions
 - Front matter delimiter must be `+++` or `++++`; dates must be ISO (`YYYY-MM-DD`).

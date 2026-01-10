@@ -12,7 +12,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 from xml.etree import ElementTree as ET
 
 import tomllib
@@ -411,25 +411,50 @@ def join_absolute_url(base: str, path: str) -> str:
     return urljoin(base.rstrip("/") + "/", path.lstrip("/"))
 
 
-def feed_self_url(site: dict, path: str) -> str:
-    explicit = str(site.get("feed_self_url", "") or "").strip()
-    if explicit:
-        if is_absolute_url(explicit):
-            return join_absolute_url(explicit, path)
-        return join_relative_url(explicit, path)
+@dataclass(frozen=True)
+class UrlContext:
+    absolute_base: str | None
+    prefix: str
+    feed_self_override: str | None
 
-    absolute_base = public_base_url(site)
-    if absolute_base:
-        return join_absolute_url(absolute_base, path)
-    prefix = public_path_prefix(site)
-    return join_relative_url(prefix, path)
+    @classmethod
+    def from_site(cls, site: dict) -> "UrlContext":
+        return cls(
+            absolute_base=public_base_url(site),
+            prefix=public_path_prefix(site),
+            feed_self_override=str(site.get("feed_self_url", "") or "").strip() or None,
+        )
+
+    def page(self, path: str) -> str:
+        if self.absolute_base:
+            return join_absolute_url(self.absolute_base, path)
+        return join_relative_url(self.prefix, path)
+
+    def asset(self, path: str) -> str | None:
+        if not path:
+            return None
+        if is_absolute_url(path):
+            return path
+        candidate = Path(path)
+        if candidate.is_absolute():
+            return None
+        return self.page(candidate.as_posix())
+
+    def feed_self(self, path: str) -> str:
+        if self.feed_self_override:
+            if is_absolute_url(self.feed_self_override):
+                return join_absolute_url(self.feed_self_override, path)
+            return join_relative_url(self.feed_self_override, path)
+        return self.page(path)
 
 
 def normalize_meta_text(value: str) -> str:
     return re.sub(r"\s+", " ", value or "").strip()
 
 
-def render_page(env: Environment, template_name: str, output_path: Path, context: dict) -> None:
+def render_page(
+    env: Environment, template_name: str, output_path: Path, context: dict, url_ctx: UrlContext
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     base_url = context["site"].get("base_url", "")
     assets_prefix = compute_assets_prefix(output_path, base_url)
@@ -440,24 +465,12 @@ def render_page(env: Environment, template_name: str, output_path: Path, context
     og_type = str(context.get("og_type", "website") or "website")
     og_image_path = str(context.get("og_image_path") or "") or None
 
-    absolute_base = public_base_url(context["site"])
-    if absolute_base:
-        canonical_url = join_absolute_url(absolute_base, page_path)
-        page_url = canonical_url
-        if og_image_path and is_absolute_url(og_image_path):
-            og_image_url = og_image_path
-        else:
-            og_image_url = (
-                join_absolute_url(absolute_base, og_image_path) if og_image_path else None
-            )
+    canonical_url = url_ctx.page(page_path)
+    page_url = canonical_url
+    if og_image_path and is_absolute_url(og_image_path):
+        og_image_url = og_image_path
     else:
-        prefix = public_path_prefix(context["site"])
-        canonical_url = join_relative_url(prefix, page_path)
-        page_url = canonical_url
-        if og_image_path and is_absolute_url(og_image_path):
-            og_image_url = og_image_path
-        else:
-            og_image_url = join_relative_url(prefix, og_image_path) if og_image_path else None
+        og_image_url = url_ctx.page(og_image_path) if og_image_path else None
 
     template = env.get_template(template_name)
     render_context = dict(context)
@@ -474,7 +487,13 @@ def render_page(env: Environment, template_name: str, output_path: Path, context
     output_path.write_text(html, encoding="utf-8")
 
 
-def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
+def build(
+    posts: Iterable[Post],
+    site: dict,
+    env: Environment,
+    url_ctx: UrlContext | None = None,
+) -> None:
+    url_ctx = url_ctx or UrlContext.from_site(site)
     now = dt.datetime.now(dt.timezone.utc)
     posts_list = list(posts)
     eager_images_count = max(0, int(site.get("eager_images", 2) or 0))
@@ -539,7 +558,7 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
                 {"src": image_src(lcp_meta), "srcset": lcp_meta.srcset} if lcp_meta else None
             ),
         )
-        render_page(env, "index.html", page_output_path(page_num), index_context)
+        render_page(env, "index.html", page_output_path(page_num), index_context, url_ctx)
 
     def infer_post_description(post: Post) -> str:
         if post.excerpt:
@@ -581,27 +600,17 @@ def build(posts: Iterable[Post], site: dict, env: Environment) -> None:
                 else None
             ),
         }
-        render_page(env, "post.html", output_file, context)
+        render_page(env, "post.html", output_file, context, url_ctx)
 
 
-def write_sitemap(posts: list[Post], site: dict) -> None:
-    absolute_base = public_base_url(site)
-    prefix = public_path_prefix(site)
+def write_sitemap(posts: list[Post], site: dict, url_ctx: UrlContext | None = None) -> None:
+    url_ctx = url_ctx or UrlContext.from_site(site)
 
     def loc(path: str) -> str:
-        if absolute_base:
-            return join_absolute_url(absolute_base, path)
-        return join_relative_url(prefix, path)
+        return url_ctx.page(path)
 
     def asset_url(path: str) -> str | None:
-        if not path:
-            return None
-        if is_absolute_url(path):
-            return path
-        candidate = Path(path)
-        if candidate.is_absolute():
-            return None
-        return loc(candidate.as_posix())
+        return url_ctx.asset(path)
 
     total_pages = max(1, math.ceil(len(posts) / POSTS_PER_PAGE))
     newest_post = posts[0] if posts else None
@@ -646,12 +655,12 @@ def write_sitemap(posts: list[Post], site: dict) -> None:
     )
 
 
-def rewrite_dist_robots(site: dict) -> None:
+def rewrite_dist_robots(site: dict, url_ctx: UrlContext | None = None) -> None:
+    url_ctx = url_ctx or UrlContext.from_site(site)
     robots_path = DIST_DIR / "robots.txt"
     if not robots_path.exists():
         return
 
-    absolute_base = public_base_url(site)
     raw_lines = robots_path.read_text(encoding="utf-8").splitlines()
     existing_sitemaps: list[str] = []
     lines: list[str] = []
@@ -662,8 +671,8 @@ def rewrite_dist_robots(site: dict) -> None:
         else:
             lines.append(line)
 
-    if absolute_base:
-        sitemap_url = join_absolute_url(absolute_base, "sitemap.xml")
+    if url_ctx.absolute_base:
+        sitemap_url = url_ctx.page("sitemap.xml")
     else:
         sitemap_url = next((url for url in existing_sitemaps if is_absolute_url(url)), "")
 
@@ -693,25 +702,10 @@ def feed_post_title(post: Post) -> str:
     return str(post.title or post.display_date or post.slug or "Post")
 
 
-def render_feed_post_html(post: Post, site: dict) -> str:
-    absolute_base = public_base_url(site)
-    prefix = public_path_prefix(site)
-
-    def asset_url(path: str) -> str | None:
-        if not path:
-            return None
-        if is_absolute_url(path):
-            return path
-        candidate = Path(path)
-        if candidate.is_absolute():
-            return None
-        if absolute_base:
-            return join_absolute_url(absolute_base, candidate.as_posix())
-        return join_relative_url(prefix, candidate.as_posix())
-
+def render_feed_post_html(post: Post, site: dict, url_ctx: UrlContext) -> str:
     parts: list[str] = []
     for meta in post.images_meta:
-        src = asset_url(image_src(meta))
+        src = url_ctx.asset(image_src(meta))
         if not src:
             continue
         alt = meta.alt if meta.alt is not None else (post.title or "Photo")
@@ -728,17 +722,15 @@ def render_feed_post_html(post: Post, site: dict) -> str:
     return "\n".join(parts).strip()
 
 
-def write_atom_feed(posts: list[Post], site: dict) -> None:
+def write_atom_feed(
+    posts: list[Post], site: dict, url_ctx: UrlContext | None = None
+) -> None:
+    url_ctx = url_ctx or UrlContext.from_site(site)
     max_posts = max(0, int(site.get("feed_max_posts", FEED_MAX_POSTS_DEFAULT) or 0))
     feed_posts = posts[:max_posts] if max_posts else []
 
-    absolute_base = public_base_url(site)
-    prefix = public_path_prefix(site)
-
     def loc(path: str) -> str:
-        if absolute_base:
-            return join_absolute_url(absolute_base, path)
-        return join_relative_url(prefix, path)
+        return url_ctx.page(path)
 
     atom_ns = "http://www.w3.org/2005/Atom"
     ET.register_namespace("", atom_ns)
@@ -750,7 +742,7 @@ def write_atom_feed(posts: list[Post], site: dict) -> None:
     ET.SubElement(
         feed_el,
         f"{{{atom_ns}}}link",
-        {"href": feed_self_url(site, "feed.xml"), "rel": "self", "type": "application/atom+xml"},
+        {"href": url_ctx.feed_self("feed.xml"), "rel": "self", "type": "application/atom+xml"},
     )
 
     newest = feed_posts[0].date if feed_posts else dt.datetime.now(dt.timezone.utc)
@@ -776,7 +768,7 @@ def write_atom_feed(posts: list[Post], site: dict) -> None:
             summary_el = ET.SubElement(entry_el, f"{{{atom_ns}}}summary", {"type": "html"})
             summary_el.text = summary
 
-        content_html = render_feed_post_html(post, site)
+        content_html = render_feed_post_html(post, site, url_ctx)
         if content_html:
             content_el = ET.SubElement(entry_el, f"{{{atom_ns}}}content", {"type": "html"})
             content_el.text = content_html
@@ -788,17 +780,13 @@ def write_atom_feed(posts: list[Post], site: dict) -> None:
     feed_path.write_text(feed_path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8")
 
 
-def write_rss_feed(posts: list[Post], site: dict) -> None:
+def write_rss_feed(posts: list[Post], site: dict, url_ctx: UrlContext | None = None) -> None:
+    url_ctx = url_ctx or UrlContext.from_site(site)
     max_posts = max(0, int(site.get("feed_max_posts", FEED_MAX_POSTS_DEFAULT) or 0))
     feed_posts = posts[:max_posts] if max_posts else []
 
-    absolute_base = public_base_url(site)
-    prefix = public_path_prefix(site)
-
     def loc(path: str) -> str:
-        if absolute_base:
-            return join_absolute_url(absolute_base, path)
-        return join_relative_url(prefix, path)
+        return url_ctx.page(path)
 
     atom_ns = "http://www.w3.org/2005/Atom"
     ET.register_namespace("atom", atom_ns)
@@ -811,7 +799,7 @@ def write_rss_feed(posts: list[Post], site: dict) -> None:
     ET.SubElement(
         channel,
         f"{{{atom_ns}}}link",
-        {"href": feed_self_url(site, "rss.xml"), "rel": "self", "type": "application/rss+xml"},
+        {"href": url_ctx.feed_self("rss.xml"), "rel": "self", "type": "application/rss+xml"},
     )
     ET.SubElement(channel, "description").text = str(site.get("description", "") or "")
     ET.SubElement(channel, "lastBuildDate").text = format_rfc822(
@@ -827,7 +815,7 @@ def write_rss_feed(posts: list[Post], site: dict) -> None:
         guid.text = post_url
         ET.SubElement(item, "pubDate").text = format_rfc822(post.date)
 
-        description = render_feed_post_html(post, site)
+        description = render_feed_post_html(post, site, url_ctx)
         if not description:
             description = normalize_meta_text(str(post.excerpt or post.title or "")) or post_url
         ET.SubElement(item, "description").text = description
@@ -839,9 +827,10 @@ def write_rss_feed(posts: list[Post], site: dict) -> None:
     rss_path.write_text(rss_path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8")
 
 
-def write_feeds(posts: list[Post], site: dict) -> None:
-    write_atom_feed(posts, site)
-    write_rss_feed(posts, site)
+def write_feeds(posts: list[Post], site: dict, url_ctx: UrlContext | None = None) -> None:
+    url_ctx = url_ctx or UrlContext.from_site(site)
+    write_atom_feed(posts, site, url_ctx)
+    write_rss_feed(posts, site, url_ctx)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -883,16 +872,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.feed_self_url is not None:
         site["feed_self_url"] = str(args.feed_self_url)
     site["inline_style"] = (ROOT / "theme.css").read_text(encoding="utf-8")
+    url_ctx = UrlContext.from_site(site)
     ensure_empty_dir(DIST_DIR)
     copy_assets()
 
     posts = collect_posts()
     attach_image_meta(posts)
     env = make_env()
-    build(posts, site, env)
-    write_sitemap(posts, site)
-    rewrite_dist_robots(site)
-    write_feeds(posts, site)
+    build(posts, site, env, url_ctx)
+    write_sitemap(posts, site, url_ctx)
+    rewrite_dist_robots(site, url_ctx)
+    write_feeds(posts, site, url_ctx)
 
     try:
         rel = DIST_DIR.relative_to(Path.cwd())
