@@ -1,62 +1,87 @@
 # Microblog Generator
 
-Static, Tumblr-inspired microblog powered by a small Python generator. Output lives in `blog/dist`, ready for Cloudflare Pages or any static host.
+This folder contains the static site generator and site source files for the photoblog.
 
 ## Requirements
-- Python 3.11+
-- [uv](https://github.com/astral-sh/uv) for dependency management
+- Python `>=3.11`
+- [uv](https://github.com/astral-sh/uv)
 
-Install dependencies:
-```bash
-uv sync
-```
+## Local Workflow
+1. Install dependencies:
+   `uv sync`
+2. Generate site:
+   `uv run generate-blog`
+3. Run tests:
+   `make test`
+4. Run lint:
+   `uv run ruff check`
+5. Preview:
+   `make preview`
 
-Generate the site:
-```bash
-uv run generate-blog
-```
+## Generator Architecture
+- `generate.py`: CLI orchestration
+- `config.py`: typed site config loading/validation
+- `content.py`: Markdown/front matter parsing
+- `images.py`: dimension lookup, `srcset` variants, LCP selection helpers
+- `render.py`: Jinja environment, page rendering, pagination build
+- `feeds.py`: Atom + RSS generation
+- `seo.py`: sitemap generation + robots sitemap rewrite
+- `urls.py`: canonical/base/feed URL logic
+- `assets.py`: dist cleanup + asset copying
+- `models.py`: shared dataclasses (`SiteConfig`, `Post`, `ImageMeta`, etc.)
 
-Run unit tests:
-```bash
-make test
-```
+## Templates and Theme
+- `templates/base.html`: global metadata/head, site header/footer shell
+- `templates/index.html`: feed page
+- `templates/post.html`: post detail page
+- `templates/_macros.html`: shared image rendering macro
+- `theme.css`: inlined into each generated page by default
 
-Preview locally:
-```bash
-make preview  # serves blog/dist on http://localhost:8080
-```
-`make preview` sets `site_url` to `http://localhost:8080` so feed self-links validate against the local server; override with `PREVIEW_URL` and `PREVIEW_PORT`.
+Behavior notes:
+- Header typography intentionally matches the original site style.
+- Post titles are intentionally not rendered as visible headings in feed/post pages.
+- Feed images and date/meta links are primary navigation affordances.
+- Post page images link to the source asset.
 
-Deploy: CI builds with GitHub Actions and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`).
+## Config Reference
+Config file: `config.toml`
 
-## Writing posts
-Add Markdown files under `blog/posts/YYYY/MM/slug.md` with TOML front matter wrapped by `+++` or `++++` lines:
-```markdown
-+++
-title = "Brooklyn Night Rain"
-date = 2024-10-12
-images = [
-  { src = "static/my-photo.jpg", alt = "Describe the photo." },
-]
-excerpt = "Optional short blurb for the index."
-layout = "photo"
-+++
+- `title`
+- `tagline`
+- `description`
+- `author`
+- `site_url`
+- `base_url`
+- `eager_images`
+- `posts_per_page`
+- `responsive_widths`
+- `image_sizes`
+- `feed_max_posts`
+- `feed_self_url`
+- `emit_style_file`
 
-Full Markdown body here. Links like [GitHub Pages](https://pages.github.com/) work as usual.
-```
+## Content and Assets
+- Posts: `posts/YYYY/MM/*.md`
+- Static source assets: `static/`
+- Generated output: `dist/`
 
-## Config
-`blog/config.toml` controls site-level text plus:
-- `site_url` (optional): your public origin (e.g. `https://julianmontez.com`) to emit absolute canonical/OG URLs and absolute sitemap locs.
-- `base_url` (optional): a path prefix if publishing under a subpath (e.g. `/julianmontez.com/blog`).
-- `eager_images` (optional, default: 2): how many top-of-page images load eagerly; the generator applies `fetchpriority="high"` + preload to the likely mobile LCP image among them.
-- `feed_max_posts` (optional, default: 25): how many posts to include in Atom/RSS feeds (0 disables entries).
-- `feed_self_url` (optional): override the base URL used for feed `rel="self"` links (useful for previews or proxies).
+Front matter expectations:
+- Delimiter `+++` or `++++` (matching open/close)
+- ISO date (`YYYY-MM-DD`)
+- `images` supports either string paths or objects with `src`/`alt`
 
-## Assets
-- Place photos in `blog/static/`; they are copied to `dist/static/`.
-- Generator auto-creates responsive raster variants (480/720/1080 widths when smaller than the source) and emits `srcset`/`sizes`; it eagerly loads the first `eager_images` images (default: 2) and applies `fetchpriority="high"` + a preload directive to the likely mobile LCP image among them.
-- Theme styles live in `blog/theme.css` and are inlined into each page (also emitted as `dist/style.css`, currently unused). Google Fonts import removed to avoid render-blocking.
-- Layout is fully center-aligned, with the title 64px from the top and 36px above the tagline.
-- Images below the fold are lazy-loaded (`loading="lazy"`, `decoding="async"`). Posts render at `/YYYY/MM/slug/` (directory-style `index.html` inside).
-- Generator writes `dist/sitemap.xml`, `dist/feed.xml` (Atom), `dist/rss.xml` (RSS), and ensures `dist/robots.txt` points at the sitemap.
+## Output Artifacts
+`dist/` contains:
+- `index.html`
+- `page/N/`
+- `YYYY/MM/slug/`
+- `static/`
+- `feed.xml`
+- `rss.xml`
+- `sitemap.xml`
+- `robots.txt`
+
+## Deployment
+CI workflow at `../.github/workflows/deploy.yml`:
+- Validates on push/PR/schedule/manual
+- Deploys on non-PR events to Cloudflare Pages

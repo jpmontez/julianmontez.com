@@ -12,8 +12,16 @@ base_url = ""
 # `loading="lazy"`). The generator picks the likely LCP image among these and applies
 # `fetchpriority="high"` + a preload directive.
 eager_images = 2
+# posts_per_page controls pagination density in the main feed.
+posts_per_page = 10
+# responsive_widths controls generated image variants for raster assets.
+responsive_widths = [480, 720, 1080]
+# image_sizes is passed directly to each responsive image's `sizes` attribute.
+image_sizes = "(max-width: 720px) 100vw, 520px"
 # feed_max_posts controls how many posts appear in Atom/RSS feeds (0 disables entries).
 feed_max_posts = 25
 # feed_self_url overrides the base URL used in Atom/RSS rel="self" links.
 # Leave empty to derive from site_url.
 feed_self_url = ""
+# emit_style_file controls whether dist/style.css is written. The site inlines theme CSS by default.
+emit_style_file = false

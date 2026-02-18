@@ -1,16 +1,19 @@
 # TODO
 
-- Fix mobile LCP and responsive images: verified via PageSpeed (100/100 Perf/Access/Best Practices/SEO). Keep an eye on future regressions.
-  - Generator creates multiple widths for raster assets and emits `srcset`/`sizes`; the first `eager_images` images load eagerly and the likely mobile LCP image among them gets `fetchpriority="high"` + a preload directive.
-  - Keep Lightroom workflow simple (single export); adjust widths/quality only if future audits regress.
-- Improve readability/accessibility in the theme (link + focus-visible styles done; bump base font size and reconsider all-caps still needed).
-- Make post titles/images clickable and add semantic headings/navigation landmarks (`h1`/`h2`, `nav` with `aria-label`) in templates.
-- Improve post page `<title>` fallback when posts lack titles (use date or excerpt instead of the generic “Post”).
-- Expand social sharing meta tags (Twitter title/description/image) for richer previews.
-- Add a gallery view for multi-photo posts.
-  - Prototype horizontal scroll added to post page; verify layout and interaction before finalizing.
+- Finalize multi-photo post gallery interaction.
+  - Current state: horizontal-scroll gallery is live on post pages.
+  - Decide whether to add lightbox/zoom, keyboard navigation, and image counters.
+- Add snapshot/golden tests for generated HTML pages to catch template regressions beyond structural unit tests.
+- Keep monitoring mobile LCP as new content lands; adjust `responsive_widths`/`image_sizes` only if audits regress.
 
 Completed (keep below active items):
+- ~~Restore original top-header typography (`Julian Montez` / `Brooklyn, NY`) and suppress rendered post titles to match the original site behavior.~~
+- ~~Refactor generator into focused modules (`config`, `content`, `images`, `render`, `feeds`, `seo`, `urls`, `assets`) with a thin `blog/generate.py` orchestrator.~~
+- ~~Expand unit test coverage beyond feeds (config/content/urls/seo/images/build).~~
+- ~~Improve HTML `<title>` metadata fallback when posts lack titles (date/excerpt-based fallback).~~
+- ~~Expand social sharing meta tags (Twitter title/description/image).~~
+- ~~Split CI into validation + deploy jobs so PRs run build/test/lint without deploying.~~
+- ~~Fix mobile LCP and responsive images: verified via PageSpeed (100/100 Perf/Access/Best Practices/SEO).~~
 - ~~Refactor URL handling to centralize base/prefix logic for pages, feeds, and sitemap generation.~~
 - ~~Add RSS/Atom feeds plus `<link rel="alternate">` headers.~~
 - ~~Fix `robots.txt` sitemap directive to always be absolute (or omitted) to satisfy Lighthouse/PageSpeed validation.~~
@@ -26,14 +29,13 @@ Completed (keep below active items):
 - ~~Add `.gitignore` entries for local env/caches (e.g., `.venv`, `.uv*`, `.ruff_cache`).~~
 - ~~Add intrinsic width/height/aspect-ratio for generated `<img>` tags (ideally using real image dimensions from static assets).~~
 - ~~Ensure CSS preserves responsive scaling without layout shift.~~
-- ~~Add a main landmark (`<main role="main">`) around primary content for accessibility.~~
+- ~~Add a main landmark (`<main>`) around primary content for accessibility.~~
 - ~~Add robots.txt.~~
 - ~~Add width/height or CSS aspect-ratio; ensure responsive sizing (max-width: 100%, height: auto).~~
-- ~~Fix CLS from unsized images:~~
-- ~~Automate Lightroom JPG exports and initial post skeleton creation/boilerplate~~
+- ~~Fix CLS from unsized images.~~
+- ~~Automate Lightroom JPG exports and initial post skeleton creation/boilerplate.~~
 - ~~Add lazy-loading to images.~~
 - ~~Cleanup the URL slugs so that `index.html` is not visible.~~
-- ~~Implement a CI/CD pipeline~~
-- ~~Implement the full GitHub Pages deployment~~
-- ~~Add pagination support~~
-- ~~Add formatting, linting support~~
+- ~~Implement a CI/CD pipeline.~~
+- ~~Add pagination support.~~
+- ~~Add formatting, linting support.~~

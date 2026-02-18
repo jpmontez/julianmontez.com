@@ -1,42 +1,17 @@
 {% extends "base.html" %}
+{% from "_macros.html" import render_post_image %}
 
 {% block content %}
   {% for post in posts %}
     <article class="post {{ post.layout }}">
-      <div class="post-header">
-        {% if post.title %}
-          <div class="title">
-            {{ post.title }}
-          </div>
-        {% endif %}
-      </div>
-
       {% if post.images_meta %}
         {% for image in post.images_meta %}
-          {% set image_id = image.primary_src or image.path %}
-          {% set is_eager = image_id in eager_image_ids %}
-          {% set is_lcp = image_id == lcp_image_id %}
-          <figure>
-            <img
-              src="{{ assets_prefix }}/{{ image.primary_src or image.path }}"
-              alt="{{ image.alt if image.alt is not none else (post.title or 'Photo') }}"
-              loading="{{ 'eager' if is_eager else 'lazy' }}"
-              {% if is_lcp %}
-              fetchpriority="high"
-              {% endif %}
-              {% if image.srcset %}
-              srcset="{% for variant, variant_width in image.srcset %}{{ assets_prefix }}/{{ variant }} {{ variant_width }}w{% if not loop.last %}, {% endif %}{% endfor %}"
-              sizes="{{ image_sizes }}"
-              {% endif %}
-              decoding="async"
-              {% if image.width and image.height %}width="{{ image.width }}" height="{{ image.height }}"{% endif %}
-            />
-          </figure>
+          {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id, assets_prefix ~ "/" ~ post.url) }}
         {% endfor %}
       {% endif %}
 
       {% if post.excerpt %}
-        <div class="body" style="text-align: center;">
+        <div class="excerpt">
           <p>{{ post.excerpt }}</p>
         </div>
       {% elif post.body_html %}
@@ -46,15 +21,15 @@
       {% endif %}
 
       <div class="meta">
-        <a href="{{ assets_prefix }}/{{ post.url }}">{{ post.display_date }}</a>
+        <a href="{{ assets_prefix }}/{{ post.url }}"><time datetime="{{ post.date.isoformat() }}">{{ post.display_date }}</time></a>
       </div>
     </article>
   {% else %}
-    <div class="feed-nav">No posts yet — add Markdown files under blog/posts/YYYY/MM/</div>
+    <p class="feed-nav">No posts yet. Add Markdown files under blog/posts/YYYY/MM/.</p>
   {% endfor %}
 
   {% if pagination and pagination.total_pages > 1 %}
-    <div class="feed-nav">
+    <nav class="feed-nav" aria-label="Feed pagination">
       {% if pagination.prev_url %}
         <a href="{{ pagination.prev_url }}">Newer</a>
       {% endif %}
@@ -62,9 +37,9 @@
       {% if pagination.next_url %}
         <a href="{{ pagination.next_url }}">Older</a>
       {% endif %}
-      <div class="meta" style="margin-top:8px; letter-spacing: 0.08em;">
+      <div class="meta">
         Page {{ pagination.current_page }} of {{ pagination.total_pages }}
       </div>
-    </div>
+    </nav>
   {% endif %}
 {% endblock %}

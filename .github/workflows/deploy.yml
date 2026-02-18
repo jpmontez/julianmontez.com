@@ -19,7 +19,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: auto
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run tests
+        run: make test
+
+      - name: Run lint
+        run: uv run ruff check
+
+      - name: Build blog
+        run: uv run generate-blog
+
   deploy:
+    needs: validate
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: cloudflare-pages
     steps:

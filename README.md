@@ -1,71 +1,103 @@
 # julianmontez.com microblog
 
-Static Tumblr-style microblog generated with Python and uv. The generator builds a fully static site into `blog/dist`, ready for Cloudflare Pages or any static host.
+Static Tumblr-style photoblog generator built with Python and uv. The site is generated into `blog/dist` and deployed as static files.
 
-## Quick start
-1. Install deps: `uv sync`
-2. Generate the site: `uv run generate-blog`
-3. Preview: open `blog/dist/index.html` (or serve `blog/dist` with any static server)
-4. Lint/format: `uv run ruff format` then `uv run ruff check`
+## Quick Start
+1. Install dependencies:
+   `uv sync`
+2. Build the site:
+   `uv run generate-blog`
+3. Run checks:
+   `make test` and `uv run ruff check`
+4. Preview locally:
+   `make preview` (serves `blog/dist` on `http://localhost:8080` by default)
 
-## Makefile shortcuts
-- `make install`: install deps with uv.
-- `make build`: install then run the generator.
-- `make preview`: generate with `site_url` set to `http://localhost:8080` (override via `PREVIEW_URL`), then serve `blog/dist` on port 8080 (override via `PREVIEW_PORT`).
-- `make clean` / `make distclean`: remove `blog/dist`; `distclean` also removes `.uv`/`.venv`.
-- `make import [LIGHTROOM_EXPORT_DIR=~/Desktop]`: import Lightroom exports via `scripts/import_lightroom.py`.
-- `make format` / `make lint` / `make check`: Ruff format, check, or both.
-- `make test`: run unit tests.
-- `make regen`: clean then build.
+## Make Targets
+- `make install`: `uv sync`
+- `make build`: install + generate site
+- `make preview`: generate with preview URL overrides and serve with `uv run python -m http.server`
+- `make test`: run unit tests
+- `make format`: run Ruff formatter
+- `make lint`: run Ruff lint checks
+- `make check`: format + lint
+- `make import [LIGHTROOM_EXPORT_DIR=...]`: import Lightroom JPG exports
+- `make clean`: remove `blog/dist`
+- `make distclean`: remove `blog/dist`, `.uv`, `.venv`
+- `make regen`: clean + build
 
-## Import Lightroom photos
-- Run `uv run python scripts/import_lightroom.py` (default source: `~/Desktop`; expected names: `YYYYMMDD-DSC_NNNN.jpg`).
-- The script copies exports into `blog/static/` as `YYYY-MM-DD-DSC_NNNN.jpg`, leaves the Desktop originals untouched, and scaffolds posts at `blog/posts/YYYY/MM/YYYY-MM-DD-<slug>.md` with photo front matter:
-  ```
-  ++++
-  date = YYYY-MM-DD
-  images = [
-    { src = "static/YYYY-MM-DD-DSC_NNNN.jpg", alt = "Describe the photo." },
-    …
-  ]
-  layout = "photo"
-  ++++
-  ```
-- If multiple photos share a date, you'll be prompted for a custom slug; if a destination image already exists, you'll be prompted to overwrite (or pass `--overwrite` to skip prompts). Use `--source /path/to/dir` to scan another folder.
+## Repository Layout
+- `blog/generate.py`: CLI entrypoint (`generate-blog`)
+- `blog/config.py`: config loading/validation + CLI overrides
+- `blog/content.py`: post/front matter parsing
+- `blog/images.py`: image metadata + responsive variant generation
+- `blog/render.py`: template rendering + pagination build
+- `blog/feeds.py`: Atom/RSS generation
+- `blog/seo.py`: sitemap + robots rewrite
+- `blog/urls.py`: URL composition helpers
+- `blog/assets.py`: dist setup + static asset copy
+- `blog/templates/`: Jinja templates
+- `blog/static/`: source static assets
+- `blog/posts/YYYY/MM/*.md`: content files
+- `tests/`: unit tests
 
-## Architecture & layout
-- Python 3.11+, uv for env/deps; Jinja2 for templating; Markdown for post bodies; Ruff for lint/format.
-- Entrypoint: `blog/generate.py` (also exposed as the `generate-blog` script).
-- Templates: `blog/templates/index.html` (feed with pagination) and `blog/templates/post.html` (per-post pages).
-- Styling: `blog/theme.css` is inlined into each page on build (also emitted as `dist/style.css`, currently unused); monochrome/centered Tumblr-inspired layout with lazy-loaded images.
-- Config: `blog/config.toml` (title, tagline, description, optional `site_url` for absolute canonical/sitemap URLs, optional `base_url` for subpath hosting, optional `feed_max_posts` to cap RSS/Atom entries, optional `feed_self_url` to override feed self links).
-- Content: `blog/posts/YYYY/MM/` Markdown with TOML front matter; assets in `blog/static/` are copied to `dist/static/`.
-- Output: `blog/dist/` with `index.html`, `sitemap.xml`, `robots.txt`, paginated feeds (`/page/N/`), and per-post pages at `/YYYY/MM/slug/` (directory-style `index.html` inside each slug).
-- Feeds: `blog/dist/feed.xml` (Atom) and `blog/dist/rss.xml` (RSS).
-- Images: generator reads intrinsic dimensions, emits responsive variants (480/720/1080 where smaller than original) with `srcset`/`sizes`, eagerly loads the first `eager_images` images (default: 2), and applies `fetchpriority="high"` + a preload directive to the likely mobile LCP image among them.
+## Writing Posts
+Create Markdown files under `blog/posts/YYYY/MM/`, for example `blog/posts/2024/10/2024-10-12-my-post.md`:
 
-## Writing posts
-Place Markdown files under `blog/posts/YYYY/MM/` using dated filenames like `2024-10-12-your-slug.md`:
 ```markdown
 +++
-title = "Brooklyn Night Rain"
+title = "Optional metadata title"
 date = 2024-10-12
 images = [
-  { src = "static/2024-10-12-brooklyn-night-rain.svg", alt = "Describe the photo." },
-] # one or many images
-excerpt = "Optional short blurb for the index."
+  { src = "static/2024-10-12-photo.jpg", alt = "Describe the photo." },
+]
+excerpt = "Optional excerpt."
 layout = "photo"
 +++
 
-Markdown body here. Multiple paragraphs and links are supported.
+Markdown body content.
 ```
-Posts are ordered reverse-chronologically. Titles are not links; the date/meta links to the per-post page. Multi-image posts are supported.
 
-## Decisions / Notes
-- Pagination is built in (10 posts per page).
-- Tagline stays visible; footer shows `© {{ now.year }}` only.
-- Layout: 64px top padding on the title, 36px spacing between title and tagline; feed excerpts centered, post bodies left-aligned. Images have a subtle shadow.
-- Images below the fold use `loading="lazy"`; CSS is inlined to avoid render-blocking requests; Google Fonts import removed.
+Notes:
+- Front matter delimiter must be `+++` or `++++` with matching start/end.
+- Dates must be ISO `YYYY-MM-DD`.
+- Post titles are intentionally hidden in rendered page content; they are still used for metadata/feed context.
+
+## Configuration
+`blog/config.toml` supports:
+- `title`, `tagline`, `description`, `author`
+- `site_url`: canonical public origin for absolute URLs
+- `base_url`: optional subpath prefix
+- `eager_images`: count of above-the-fold eager-loaded images
+- `posts_per_page`: feed pagination size
+- `responsive_widths`: generated raster widths
+- `image_sizes`: responsive `sizes` attribute value
+- `feed_max_posts`: max Atom/RSS items (`0` disables entries)
+- `feed_self_url`: optional feed self-link base override
+- `emit_style_file`: emit `dist/style.css` in addition to inline CSS
+
+## Lightroom Import
+`scripts/import_lightroom.py` imports files matching `YYYYMMDD-DSC_NNNN.jpg`:
+- Copies photos into `blog/static/` as `YYYY-MM-DD-DSC_NNNN.jpg`
+- Scaffolds post files in `blog/posts/YYYY/MM/`
+- Prompts for slug on same-day multi-image imports
+- Prompts before overwrite unless `--overwrite` is passed
+
+## Generated Output
+`blog/dist/` includes:
+- `index.html`
+- `page/N/` pagination
+- `YYYY/MM/slug/` post pages
+- `static/` assets
+- `feed.xml` (Atom) and `rss.xml`
+- `sitemap.xml`
+- `robots.txt`
 
 ## CI/CD
-- GitHub Actions builds on push/PR/schedule and deploys `blog/dist` to Cloudflare Pages via `cloudflare/wrangler-action@v3`. Configure secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`.
+GitHub Actions workflow `.github/workflows/deploy.yml`:
+- `validate` job: install, test, lint, build
+- `deploy` job: runs only on non-PR events and deploys `blog/dist` to Cloudflare Pages
+
+Required secrets:
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_PROJECT_NAME`

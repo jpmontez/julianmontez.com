@@ -2,10 +2,11 @@ import datetime as dt
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 from xml.etree import ElementTree as ET
 
-import blog.generate as gen
+from blog.feeds import write_feeds
+from blog.models import ImageMeta, Post, SiteConfig
+from blog.urls import UrlContext
 
 
 class FeedTests(unittest.TestCase):
@@ -14,16 +15,14 @@ class FeedTests(unittest.TestCase):
             dist_dir = Path(tmp) / "dist"
             dist_dir.mkdir()
 
-            site = {
-                "title": "Test Blog",
-                "description": "Testing feeds",
-                "author": "Test Author",
-                "site_url": "http://localhost:8080",
-                "base_url": "",
-                "feed_max_posts": 25,
-            }
-
-            post = gen.Post(
+            site = SiteConfig(
+                title="Test Blog",
+                description="Testing feeds",
+                author="Test Author",
+                site_url="http://localhost:8080",
+                feed_max_posts=25,
+            )
+            post = Post(
                 source=Path("post.md"),
                 title="Hello",
                 date=dt.date(2024, 1, 2),
@@ -36,7 +35,7 @@ class FeedTests(unittest.TestCase):
                 url="2024/01/hello/",
                 slug="hello",
                 images_meta=[
-                    gen.ImageMeta(
+                    ImageMeta(
                         path="static/photo.jpg",
                         width=800,
                         height=600,
@@ -47,8 +46,7 @@ class FeedTests(unittest.TestCase):
                 ],
             )
 
-            with patch.object(gen, "DIST_DIR", dist_dir):
-                gen.write_feeds([post], site)
+            write_feeds([post], site=site, url_ctx=UrlContext.from_site(site), dist_dir=dist_dir)
 
             atom_path = dist_dir / "feed.xml"
             rss_path = dist_dir / "rss.xml"

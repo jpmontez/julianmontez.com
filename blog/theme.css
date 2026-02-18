@@ -84,9 +84,18 @@ article.post {
 }
 
 .post .title {
-  font-size: 16px;
-  margin: 8px 0;
-  text-transform: uppercase;
+  font-size: 19px;
+  margin: 8px 0 12px;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.post .title a {
+  text-decoration: none;
+}
+
+.post .title a:hover {
+  text-decoration: underline;
 }
 
 .post figure {
@@ -100,6 +109,10 @@ article.post {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.post .post-image-link {
+  display: block;
 }
 
 .post .excerpt {
@@ -173,6 +186,11 @@ article.post {
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
+}
+
+.feed-nav .meta {
+  margin-top: 8px;
+  letter-spacing: 0.08em;
 }
 
 .footer {

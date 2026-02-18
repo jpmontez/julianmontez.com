@@ -13,7 +13,7 @@ build: install
 
 preview: install
 	uv run generate-blog --site-url $(PREVIEW_URL) --feed-self-url $(PREVIEW_URL)
-	python -m http.server $(PREVIEW_PORT) -d $(SITE_DIST_DIR)
+	uv run python -m http.server $(PREVIEW_PORT) -d $(SITE_DIST_DIR)
 
 clean:
 	rm -rf $(SITE_DIST_DIR)

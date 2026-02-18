@@ -15,6 +15,11 @@
       <meta property="og:image" content="{{ og_image_url }}" />
     {% endif %}
     <meta name="twitter:card" content="{{ twitter_card }}" />
+    <meta name="twitter:title" content="{{ twitter_title }}" />
+    <meta name="twitter:description" content="{{ twitter_description }}" />
+    {% if twitter_image_url %}
+      <meta name="twitter:image" content="{{ twitter_image_url }}" />
+    {% endif %}
     <link
       rel="alternate"
       type="application/atom+xml"
@@ -48,12 +53,12 @@
         <span class="title">{{ site.title }}</span>
         <span class="tagline">{{ site.tagline }}</span>
       </header>
-      <main role="main">
+      <main>
         {% block content %}{% endblock %}
       </main>
-      <div class="footer">
+      <footer class="footer">
         &copy; {{ now.year }}
-      </div>
+      </footer>
     </div>
   </body>
 </html>
