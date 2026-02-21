@@ -5,11 +5,27 @@
   <article class="post {{ post.layout }}">
     {% if post.images_meta %}
       {% set is_gallery = post.images_meta | length > 1 %}
-      {% if is_gallery %}<section class="gallery" aria-label="Post image gallery">{% endif %}
-      {% for image in post.images_meta %}
-        {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id, assets_prefix ~ "/" ~ image.path) }}
-      {% endfor %}
-      {% if is_gallery %}</section>{% endif %}
+      {% if is_gallery %}
+        <section class="slideshow" aria-label="Post image slideshow" data-slideshow>
+          <div class="slideshow-viewport">
+            <div class="slideshow-track">
+              {% for image in post.images_meta %}
+                <div class="slide{% if loop.first %} is-active{% endif %}" data-slide>
+                  {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id) }}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="slideshow-nav" aria-label="Slideshow navigation">
+            <button class="slideshow-control prev" type="button" aria-label="Previous photo">‹</button>
+            <button class="slideshow-control next" type="button" aria-label="Next photo">›</button>
+          </div>
+        </section>
+      {% else %}
+        {% for image in post.images_meta %}
+          {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id, assets_prefix ~ "/" ~ image.path) }}
+        {% endfor %}
+      {% endif %}
     {% endif %}
 
     {% if post.excerpt %}
@@ -30,4 +46,69 @@
   <nav class="feed-nav" aria-label="Post navigation">
     <a href="{{ assets_prefix }}/">Back to feed</a>
   </nav>
+
+  <script>
+    (function () {
+      var slideshows = document.querySelectorAll("[data-slideshow]");
+      if (!slideshows.length) {
+        return;
+      }
+      slideshows.forEach(function (slideshow) {
+        var viewport = slideshow.querySelector(".slideshow-viewport");
+        var track = slideshow.querySelector(".slideshow-track");
+        var slides = Array.prototype.slice.call(slideshow.querySelectorAll("[data-slide]"));
+        if (slides.length <= 1) {
+          return;
+        }
+        var prev = slideshow.querySelector(".slideshow-control.prev");
+        var next = slideshow.querySelector(".slideshow-control.next");
+        var index = slides.findIndex(function (slide) {
+          return slide.classList.contains("is-active");
+        });
+        if (index < 0) {
+          index = 0;
+          slides[0].classList.add("is-active");
+        }
+        var centerSlide = function () {
+          if (!viewport || !track) {
+            return;
+          }
+          var slide = slides[index];
+          var slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
+          var viewportCenter = viewport.clientWidth / 2;
+          var translate = viewportCenter - slideCenter;
+          track.style.transform = "translateX(" + translate + "px)";
+        };
+        var setActive = function (nextIndex) {
+          slides[index].classList.remove("is-active");
+          index = (nextIndex + slides.length) % slides.length;
+          slides[index].classList.add("is-active");
+          centerSlide();
+        };
+        if (prev) {
+          prev.addEventListener("click", function () {
+            setActive(index - 1);
+          });
+        }
+        if (next) {
+          next.addEventListener("click", function () {
+            setActive(index + 1);
+          });
+        }
+        slides.forEach(function (slide, slideIndex) {
+          slide.addEventListener("click", function () {
+            setActive(slideIndex);
+          });
+        });
+        slides.forEach(function (slide) {
+          var img = slide.querySelector("img");
+          if (img && !img.complete) {
+            img.addEventListener("load", centerSlide);
+          }
+        });
+        window.addEventListener("resize", centerSlide);
+        requestAnimationFrame(centerSlide);
+      });
+    })();
+  </script>
 {% endblock %}

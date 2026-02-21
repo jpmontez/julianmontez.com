@@ -41,7 +41,8 @@ Behavior notes:
 - Header typography intentionally matches the original site style.
 - Post titles are intentionally not rendered as visible headings in feed/post pages.
 - Feed images and date/meta links are primary navigation affordances.
-- Post page images link to the source asset.
+- Multi-image posts render as a horizontal strip slideshow; arrows and image clicks center the active image.
+- Single-image posts keep direct image linking behavior.
 
 ## Config Reference
 Config file: `config.toml`

@@ -10,6 +10,8 @@ Last updated: 2026-02-18
 - CSS is inlined by default; external `dist/style.css` is optional via `emit_style_file`.
 - Responsive image variants, sitemap, robots, Atom, and RSS are generated during build.
 - Feed/post visuals intentionally hide post title headings; navigation relies on date/meta and image links.
+- Multi-image posts render as a horizontal strip slideshow with left/right arrow controls that center the active image.
+- In slideshow mode, clicking an image now selects/centers that image instead of navigating to the source file.
 - Site header typography intentionally matches the original visual style.
 - CI workflow split:
   - `validate` job runs test/lint/build.

@@ -171,6 +171,78 @@ article.post {
   align-items: center;
 }
 
+.post .slideshow {
+  position: relative;
+  margin: 0 auto 24px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding: 0 36px;
+}
+
+.post .slideshow-viewport {
+  width: 100%;
+  overflow: visible;
+}
+
+.post .slideshow-track {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.post .slideshow .slide {
+  flex: 0 0 auto;
+  width: min(520px, 90vw);
+  cursor: pointer;
+}
+
+.post .slideshow .slide.is-active {
+  cursor: pointer;
+}
+
+.post .slideshow figure {
+  margin: 0;
+  max-width: none;
+}
+
+.post .slideshow-control {
+  border: none;
+  background: transparent;
+  color: #4f4f4f;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.82;
+  transition: opacity 160ms ease;
+}
+
+.post .slideshow-nav {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.post .slideshow-control:hover {
+  color: #4f4f4f;
+  opacity: 1;
+  cursor: pointer;
+}
+
+.post .slideshow-control:active,
+.post .slideshow-control:focus {
+  color: #4f4f4f;
+}
+
+.post .slideshow-control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .post .body a {
   text-decoration: underline;
 }
@@ -222,6 +294,14 @@ article.post {
 
   .post .gallery {
     max-width: 100%;
+  }
+
+  .post .slideshow {
+    padding: 0 28px;
+  }
+
+  .post .slideshow-control {
+    font-size: 18px;
   }
 
   .post .body {
