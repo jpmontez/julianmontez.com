@@ -12,6 +12,7 @@ Last updated: 2026-02-18
 - Feed/post visuals intentionally hide post title headings; navigation relies on date/meta and image links.
 - Multi-image posts render as a horizontal strip slideshow with left/right arrow controls that center the active image.
 - In slideshow mode, clicking an image now selects/centers that image instead of navigating to the source file.
+- Keyboard arrow keys (`←`/`→`) now navigate the active slideshow using the same centering behavior.
 - Site header typography intentionally matches the original visual style.
 - CI workflow split:
   - `validate` job runs test/lint/build.

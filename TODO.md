@@ -1,10 +1,11 @@
 # TODO
 
-- Consider enhancing slideshow interaction (keyboard navigation, counters, or lightbox).
+- Consider enhancing slideshow interaction (counters or lightbox).
 - Add snapshot/golden tests for generated HTML pages to catch template regressions beyond structural unit tests.
 - Keep monitoring mobile LCP as new content lands; adjust `responsive_widths`/`image_sizes` only if audits regress.
 
 Completed (keep below active items):
+- ~~Add keyboard arrow-key navigation (`←` / `→`) for multi-image slideshow posts.~~
 - ~~Finalize multi-photo post gallery interaction (replace horizontal scroll with arrow-controlled slideshow).~~
 - ~~Restore original top-header typography (`Julian Montez` / `Brooklyn, NY`) and suppress rendered post titles to match the original site behavior.~~
 - ~~Refactor generator into focused modules (`config`, `content`, `images`, `render`, `feeds`, `seo`, `urls`, `assets`) with a thin `blog/generate.py` orchestrator.~~
