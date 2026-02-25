@@ -5,6 +5,7 @@
 - Keep monitoring mobile LCP as new content lands; adjust `responsive_widths`/`image_sizes` only if audits regress.
 
 Completed (keep below active items):
+- ~~Make the site header title clickable so it always links back to the homepage feed.~~
 - ~~Add keyboard arrow-key navigation (`←` / `→`) for multi-image slideshow posts.~~
 - ~~Finalize multi-photo post gallery interaction (replace horizontal scroll with arrow-controlled slideshow).~~
 - ~~Restore original top-header typography (`Julian Montez` / `Brooklyn, NY`) and suppress rendered post titles to match the original site behavior.~~
