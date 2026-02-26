@@ -23,7 +23,7 @@
         </section>
       {% else %}
         {% for image in post.images_meta %}
-          {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id, assets_prefix ~ "/" ~ image.path) }}
+          {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id) }}
         {% endfor %}
       {% endif %}
     {% endif %}

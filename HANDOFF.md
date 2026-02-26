@@ -1,7 +1,7 @@
 # Project Snapshot
 Static Tumblr-style microblog generator in Python (uv-managed), publishing static output to `blog/dist` for Cloudflare Pages.
 
-Last updated: 2026-02-25
+Last updated: 2026-02-26
 
 # Current State
 - Generator architecture is modular:
@@ -12,6 +12,7 @@ Last updated: 2026-02-25
 - Feed/post visuals intentionally hide post title headings; navigation relies on date/meta and image links.
 - Multi-image posts render as a horizontal strip slideshow with left/right arrow controls that center the active image.
 - In slideshow mode, clicking an image now selects/centers that image instead of navigating to the source file.
+- Single-image post pages now match slideshow behavior: clicking an image no longer opens the source file directly.
 - Keyboard arrow keys (`←`/`→`) now navigate the active slideshow using the same centering behavior.
 - Site header typography intentionally matches the original visual style.
 - Site title in the header now links to the homepage (`{{ assets_prefix }}/`) from every page.
