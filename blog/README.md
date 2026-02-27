@@ -41,8 +41,10 @@ Behavior notes:
 - Header typography intentionally matches the original site style.
 - Post titles are intentionally not rendered as visible headings in feed/post pages.
 - Feed images and date/meta links are primary navigation affordances.
+- Images render through `<picture>` with AVIF/WebP sources and JPEG/PNG fallback.
+- Posts can render optional location context (name and map coordinates).
 - Multi-image posts render as a horizontal strip slideshow; controls, image clicks, and keyboard arrow keys (`←`/`→`) center the active image.
-- Single-image posts keep direct image linking behavior.
+- Single-image post pages no longer open the source image directly when clicked.
 
 ## Config Reference
 Config file: `config.toml`
@@ -70,6 +72,7 @@ Front matter expectations:
 - Delimiter `+++` or `++++` (matching open/close)
 - ISO date (`YYYY-MM-DD`)
 - `images` supports either string paths or objects with `src`/`alt`
+- `location` supports either a string name or a table like `{ name = "...", lat = 40.0, lon = -73.0 }`
 
 ## Output Artifacts
 `dist/` contains:

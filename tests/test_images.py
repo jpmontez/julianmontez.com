@@ -47,6 +47,16 @@ class ImageTests(unittest.TestCase):
             self.assertTrue((dist_dir / "static" / "photo-50w.jpg").exists())
             self.assertTrue((dist_dir / "static" / "photo-100w.jpg").exists())
 
+            if meta.webp_srcset:
+                webp_widths = [width for _, width in meta.webp_srcset]
+                self.assertEqual(webp_widths, [50, 100, 120])
+                self.assertTrue((dist_dir / "static" / "photo-120w.webp").exists())
+
+            if meta.avif_srcset:
+                avif_widths = [width for _, width in meta.avif_srcset]
+                self.assertEqual(avif_widths, [50, 100, 120])
+                self.assertTrue((dist_dir / "static" / "photo-120w.avif").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

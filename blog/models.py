@@ -17,6 +17,8 @@ class ImageMeta:
     width: int | None
     height: int | None
     srcset: list[tuple[str, int]] = field(default_factory=list)
+    webp_srcset: list[tuple[str, int]] = field(default_factory=list)
+    avif_srcset: list[tuple[str, int]] = field(default_factory=list)
     primary_src: str | None = None
     alt: str | None = None
 
@@ -40,6 +42,9 @@ class Post:
     display_date: str
     url: str
     slug: str
+    location_name: str | None = None
+    location_latitude: float | None = None
+    location_longitude: float | None = None
     images_meta: list[ImageMeta] = field(default_factory=list)
 
 

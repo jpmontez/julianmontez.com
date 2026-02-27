@@ -3,8 +3,14 @@
 - Consider enhancing slideshow interaction (counters or lightbox).
 - Add snapshot/golden tests for generated HTML pages to catch template regressions beyond structural unit tests.
 - Keep monitoring mobile LCP as new content lands; adjust `responsive_widths`/`image_sizes` only if audits regress.
+- Iterate on body typography using the new sample post and decide final mobile/desktop type scale.
+- Backfill optional `location` metadata (name + lat/lon) for older posts where known.
 
 Completed (keep below active items):
+- ~~Set post body copy to a Helvetica-first sans-serif stack.~~
+- ~~Generate AVIF/WebP responsive transcodes and render photos with `<picture>` + JPEG fallback.~~
+- ~~Increase base text size only for mobile devices (coarse pointer + max-width media query).~~
+- ~~Add optional post location rendering (name + map coordinates) and create a lorem-ipsum sample post.~~
 - ~~Change single-image post image clicks to match slideshow behavior (no direct image-file navigation).~~
 - ~~Make the site header title clickable so it always links back to the homepage feed.~~
 - ~~Add keyboard arrow-key navigation (`←` / `→`) for multi-image slideshow posts.~~

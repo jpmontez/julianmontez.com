@@ -51,6 +51,7 @@ images = [
   { src = "static/2024-10-12-photo.jpg", alt = "Describe the photo." },
 ]
 excerpt = "Optional excerpt."
+location = { name = "Prospect Park, Brooklyn, NY", lat = 40.66020, lon = -73.96900 }
 layout = "photo"
 +++
 
@@ -60,6 +61,7 @@ Markdown body content.
 Notes:
 - Front matter delimiter must be `+++` or `++++` with matching start/end.
 - Dates must be ISO `YYYY-MM-DD`.
+- `location` is optional; supports either a string name or a table with `name` + `lat`/`lon`.
 - Post titles are intentionally hidden in rendered page content; they are still used for metadata/feed context.
 
 ## Configuration
@@ -88,6 +90,7 @@ Notes:
 - `page/N/` pagination
 - `YYYY/MM/slug/` post pages
 - `static/` assets
+  - Source images plus responsive variants and modern transcodes (`.webp` / `.avif`) for `<picture>` delivery
 - `feed.xml` (Atom) and `rss.xml`
 - `sitemap.xml`
 - `robots.txt`

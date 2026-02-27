@@ -8,7 +8,15 @@ from blog.render import build_site, make_env
 from blog.urls import UrlContext
 
 
-def _post(*, slug: str, date: dt.date, title: str | None) -> Post:
+def _post(
+    *,
+    slug: str,
+    date: dt.date,
+    title: str | None,
+    location_name: str | None = None,
+    location_latitude: float | None = None,
+    location_longitude: float | None = None,
+) -> Post:
     return Post(
         source=Path(f"{slug}.md"),
         title=title,
@@ -21,7 +29,19 @@ def _post(*, slug: str, date: dt.date, title: str | None) -> Post:
         display_date=date.strftime("%d %b %Y"),
         url=f"{date.year}/{date.month:02d}/{slug}/",
         slug=slug,
-        images_meta=[ImageMeta(path="static/photo.jpg", width=800, height=600)],
+        location_name=location_name,
+        location_latitude=location_latitude,
+        location_longitude=location_longitude,
+        images_meta=[
+            ImageMeta(
+                path="static/photo.jpg",
+                width=800,
+                height=600,
+                srcset=[("static/photo-480w.jpg", 480), ("static/photo.jpg", 800)],
+                webp_srcset=[("static/photo-480w.webp", 480), ("static/photo-800w.webp", 800)],
+                avif_srcset=[("static/photo-480w.avif", 480), ("static/photo-800w.avif", 800)],
+            )
+        ],
     )
 
 
@@ -34,7 +54,14 @@ class BuildTests(unittest.TestCase):
             env = make_env(templates_dir)
 
             posts = [
-                _post(slug="titled", date=dt.date(2024, 1, 3), title="Titled"),
+                _post(
+                    slug="titled",
+                    date=dt.date(2024, 1, 3),
+                    title="Titled",
+                    location_name="Prospect Park, Brooklyn, NY",
+                    location_latitude=40.6602,
+                    location_longitude=-73.9690,
+                ),
                 _post(slug="untitled", date=dt.date(2024, 1, 2), title=None),
             ]
             site = SiteConfig(
@@ -49,6 +76,10 @@ class BuildTests(unittest.TestCase):
 
             index = (dist_dir / "index.html").read_text(encoding="utf-8")
             self.assertIn('class="post-image-link" href="./2024/01/titled/"', index)
+            self.assertIn("<picture>", index)
+            self.assertIn('type="image/avif"', index)
+            self.assertIn("Prospect Park, Brooklyn, NY", index)
+            self.assertIn("maps.google.com/?q=40.6602,-73.969", index)
             self.assertNotIn('<h2 class="title">', index)
             self.assertIn('<nav class="feed-nav" aria-label="Feed pagination">', index)
             self.assertIn('href="page/2/"', index)

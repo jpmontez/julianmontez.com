@@ -71,6 +71,72 @@ def parse_images(meta: dict, source: Path) -> tuple[list[str], list[str | None]]
     return images, image_alts
 
 
+def _parse_coordinate(
+    value: object,
+    *,
+    source: Path,
+    field_name: str,
+    min_value: float,
+    max_value: float,
+) -> float:
+    try:
+        coordinate = float(value)  # type: ignore[arg-type]
+    except Exception as exc:
+        raise ValueError(f"Invalid {field_name} in {source}: expected a number") from exc
+
+    if coordinate < min_value or coordinate > max_value:
+        raise ValueError(
+            f"Invalid {field_name} in {source}: expected {min_value} <= value <= {max_value}"
+        )
+    return coordinate
+
+
+def parse_location(meta: dict, source: Path) -> tuple[str | None, float | None, float | None]:
+    raw = meta.get("location")
+    if raw is None:
+        return None, None, None
+
+    if isinstance(raw, str):
+        name = raw.strip()
+        return (name if name else None), None, None
+
+    if not isinstance(raw, dict):
+        raise ValueError(f"Invalid location field in {source}: expected a string or table")
+
+    raw_name = raw.get("name")
+    name = None if raw_name is None else str(raw_name).strip()
+    latitude_raw = raw.get("lat", raw.get("latitude"))
+    longitude_raw = raw.get("lon", raw.get("lng", raw.get("longitude")))
+
+    if (latitude_raw is None) != (longitude_raw is None):
+        raise ValueError(f"Invalid location in {source}: latitude/longitude must be provided together")
+
+    latitude = (
+        _parse_coordinate(
+            latitude_raw,
+            source=source,
+            field_name="location latitude",
+            min_value=-90.0,
+            max_value=90.0,
+        )
+        if latitude_raw is not None
+        else None
+    )
+    longitude = (
+        _parse_coordinate(
+            longitude_raw,
+            source=source,
+            field_name="location longitude",
+            min_value=-180.0,
+            max_value=180.0,
+        )
+        if longitude_raw is not None
+        else None
+    )
+
+    return (name if name else None), latitude, longitude
+
+
 def parse_post(path: Path) -> Post:
     raw = path.read_text(encoding="utf-8")
     meta, body_md = parse_front_matter(raw)
@@ -82,6 +148,7 @@ def parse_post(path: Path) -> Post:
 
     title = meta.get("title")
     images, image_alts = parse_images(meta, path)
+    location_name, location_latitude, location_longitude = parse_location(meta, path)
     excerpt = meta.get("excerpt")
     layout = meta.get("layout", "photo")
     slug = path.stem
@@ -102,6 +169,9 @@ def parse_post(path: Path) -> Post:
         display_date=display_date,
         url=url,
         slug=slug,
+        location_name=location_name,
+        location_latitude=location_latitude,
+        location_longitude=location_longitude,
     )
 
 

@@ -40,6 +40,23 @@
       </div>
     {% endif %}
 
+    {% if post.location_name or (post.location_latitude is not none and post.location_longitude is not none) %}
+      <p class="location">
+        {% if post.location_name %}
+          <span class="location-name">{{ post.location_name }}</span>
+        {% endif %}
+        {% if post.location_latitude is not none and post.location_longitude is not none %}
+          {% if post.location_name %}<span aria-hidden="true"> · </span>{% endif %}
+          <a
+            href="https://maps.google.com/?q={{ post.location_latitude }},{{ post.location_longitude }}"
+            class="location-coords"
+          >
+            {{ "%.5f"|format(post.location_latitude) }}, {{ "%.5f"|format(post.location_longitude) }}
+          </a>
+        {% endif %}
+      </p>
+    {% endif %}
+
     <p class="meta"><time datetime="{{ post.date.isoformat() }}">{{ post.display_date }}</time></p>
   </article>
 

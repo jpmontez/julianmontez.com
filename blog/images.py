@@ -64,6 +64,52 @@ def generate_variants(
     return variants
 
 
+def generate_transcoded_variants(
+    source_path: Path,
+    dist_path: Path,
+    *,
+    widths: tuple[int, ...],
+    original: tuple[int | None, int | None],
+    dist_root: Path,
+    output_format: str,
+    output_extension: str,
+    save_kwargs: dict[str, int | bool],
+) -> list[tuple[str, int]]:
+    src_width, src_height = original
+    if not src_width or not src_height:
+        return []
+
+    suffix = source_path.suffix.lower()
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+        return []
+
+    targets = sorted({target for target in widths if target < src_width} | {src_width})
+    if not targets:
+        return []
+
+    dist_dir = dist_path.parent
+    dist_dir.mkdir(parents=True, exist_ok=True)
+
+    variants: list[tuple[str, int]] = []
+    try:
+        with Image.open(source_path) as source_image:
+            for target_width in targets:
+                target_path = dist_dir / f"{source_path.stem}-{target_width}w{output_extension}"
+                if not target_path.exists():
+                    if target_width == src_width:
+                        output_image = source_image
+                    else:
+                        target_height = max(1, round(src_height * (target_width / src_width)))
+                        output_image = source_image.resize((target_width, target_height), Image.LANCZOS)
+                    output_image.save(target_path, format=output_format, **save_kwargs)
+                variants.append((target_path.relative_to(dist_root).as_posix(), target_width))
+    except Exception:
+        # Some environments or Pillow builds may not support AVIF/WebP encoders.
+        return []
+
+    return variants
+
+
 def choose_primary_src(
     srcset: list[tuple[str, int]],
     fallback: str,
@@ -87,6 +133,8 @@ def attach_image_meta(
 ) -> None:
     cache: dict[str, tuple[int | None, int | None]] = {}
     variants_cache: dict[str, list[tuple[str, int]]] = {}
+    webp_variants_cache: dict[str, list[tuple[str, int]]] = {}
+    avif_variants_cache: dict[str, list[tuple[str, int]]] = {}
 
     for post in posts:
         metas: list[ImageMeta] = []
@@ -99,6 +147,8 @@ def attach_image_meta(
                 cache[image] = image_dimensions(image_path)
                 if candidate.is_absolute():
                     variants_cache[image] = []
+                    webp_variants_cache[image] = []
+                    avif_variants_cache[image] = []
                 else:
                     dist_path = dist_dir / candidate
                     variants_cache[image] = generate_variants(
@@ -108,9 +158,31 @@ def attach_image_meta(
                         original=cache[image],
                         dist_root=dist_dir,
                     )
+                    webp_variants_cache[image] = generate_transcoded_variants(
+                        source_path=image_path,
+                        dist_path=dist_path,
+                        widths=responsive_widths,
+                        original=cache[image],
+                        dist_root=dist_dir,
+                        output_format="WEBP",
+                        output_extension=".webp",
+                        save_kwargs={"quality": 80, "method": 6},
+                    )
+                    avif_variants_cache[image] = generate_transcoded_variants(
+                        source_path=image_path,
+                        dist_path=dist_path,
+                        widths=responsive_widths,
+                        original=cache[image],
+                        dist_root=dist_dir,
+                        output_format="AVIF",
+                        output_extension=".avif",
+                        save_kwargs={"quality": 55},
+                    )
 
             width, height = cache[image]
             variants = variants_cache.get(image, [])
+            webp_variants = webp_variants_cache.get(image, [])
+            avif_variants = avif_variants_cache.get(image, [])
             primary_src = choose_primary_src(
                 srcset=variants,
                 fallback=image if candidate.is_absolute() else candidate.as_posix(),
@@ -121,6 +193,8 @@ def attach_image_meta(
                     width=width,
                     height=height,
                     srcset=variants,
+                    webp_srcset=webp_variants,
+                    avif_srcset=avif_variants,
                     primary_src=primary_src,
                     alt=alt,
                 )

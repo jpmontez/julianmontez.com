@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from blog.content import parse_front_matter, parse_images, parse_post
+from blog.content import parse_front_matter, parse_images, parse_location, parse_post
 
 
 class ContentTests(unittest.TestCase):
@@ -46,6 +46,19 @@ Body
             )
             with self.assertRaises(ValueError):
                 parse_post(path)
+
+    def test_parse_location_supports_named_coordinates(self) -> None:
+        name, lat, lon = parse_location(
+            {"location": {"name": "Brooklyn Bridge Park", "lat": 40.7003, "lon": -73.9967}},
+            Path("post.md"),
+        )
+        self.assertEqual(name, "Brooklyn Bridge Park")
+        self.assertEqual(lat, 40.7003)
+        self.assertEqual(lon, -73.9967)
+
+    def test_parse_location_rejects_partial_coordinates(self) -> None:
+        with self.assertRaises(ValueError):
+            parse_location({"location": {"name": "Incomplete", "lat": 40.7}}, Path("post.md"))
 
 
 if __name__ == "__main__":

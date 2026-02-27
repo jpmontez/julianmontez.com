@@ -131,6 +131,10 @@ article.post {
   height: auto;
 }
 
+.post picture {
+  display: block;
+}
+
 .post .post-image-link {
   display: block;
 }
@@ -145,11 +149,28 @@ article.post {
 .post .body {
   max-width: 500px;
   margin: 0 auto;
+  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
   text-align: left;
 }
 
 .post .body p {
+  font-size: 12.5px;
   margin: 0 0 18px;
+}
+
+.post .location {
+  margin: 0 auto 12px;
+  max-width: 500px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.post .location .location-coords {
+  text-decoration: none;
+}
+
+.post .location .location-coords:hover {
+  text-decoration: underline;
 }
 
 .post .gallery {
@@ -291,6 +312,12 @@ article.post {
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
+}
+
+@media (max-width: 720px) and (hover: none) and (pointer: coarse) {
+  body {
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 720px) {
