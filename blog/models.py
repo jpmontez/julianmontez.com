@@ -91,8 +91,9 @@ class SiteConfig:
     image_sizes: str = DEFAULT_IMAGE_SIZES
     inline_style: str = ""
     emit_style_file: bool = False
+    favicon_hash: str = ""
 
-    def with_runtime(self, *, inline_style: str) -> "SiteConfig":
+    def with_runtime(self, *, inline_style: str, favicon_hash: str = "") -> "SiteConfig":
         return SiteConfig(
             title=self.title,
             tagline=self.tagline,
@@ -108,6 +109,7 @@ class SiteConfig:
             image_sizes=self.image_sizes,
             inline_style=inline_style,
             emit_style_file=self.emit_style_file,
+            favicon_hash=favicon_hash,
         )
 
 

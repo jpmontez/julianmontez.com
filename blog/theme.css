@@ -6,6 +6,30 @@
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
 }
 
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--bg);
+  text-decoration: none;
+  font-size: 14px;
+  z-index: 100;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -254,8 +278,18 @@ article.post {
 .post .slideshow-nav {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 18px;
   margin-top: 12px;
+}
+
+.post .slideshow-counter {
+  color: var(--muted);
+  font-size: 11px;
+  min-width: 3em;
+  text-align: center;
+  position: relative;
+  top: 2px;
 }
 
 .post .slideshow-control:hover {
@@ -312,6 +346,24 @@ article.post {
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --ink: #e0e0e0;
+    --muted: #999999;
+    --accent: #f0f0f0;
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  }
+
+  .post figure {
+    background: #222222;
+  }
+
+  a {
+    text-decoration-color: rgba(240, 240, 240, 0.35);
+  }
 }
 
 @media (max-width: 720px) and (hover: none) and (pointer: coarse) {

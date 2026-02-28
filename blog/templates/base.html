@@ -32,7 +32,7 @@
       title="{{ site.title }}"
       href="{{ assets_prefix }}/rss.xml"
     />
-    <link rel="icon" type="image/png" href="{{ assets_prefix }}/favicon.png" />
+    <link rel="icon" type="image/png" href="{{ assets_prefix }}/favicon.png{% if site.favicon_hash %}?v={{ site.favicon_hash }}{% endif %}" />
     {% if preload_image %}
       <link
         rel="preload"
@@ -46,14 +46,16 @@
       />
     {% endif %}
     <style>{{ inline_style | safe }}</style>
+    {% block structured_data %}{% endblock %}
   </head>
   <body>
+    <a href="#main" class="skip-link">Skip to content</a>
     <div class="page">
       <header class="site">
         <span class="title"><a href="{{ assets_prefix }}/">{{ site.title }}</a></span>
         <span class="tagline">{{ site.tagline }}</span>
       </header>
-      <main>
+      <main id="main">
         {% block content %}{% endblock %}
       </main>
       <footer class="footer">

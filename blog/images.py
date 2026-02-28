@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import logging
 from pathlib import Path
 from typing import Iterable
 
 from PIL import Image
 
 from blog.models import ImageMeta, Post
+
+logger = logging.getLogger(__name__)
 
 
 def image_dimensions(image_path: Path) -> tuple[int | None, int | None]:
@@ -103,8 +107,10 @@ def generate_transcoded_variants(
                         output_image = source_image.resize((target_width, target_height), Image.LANCZOS)
                     output_image.save(target_path, format=output_format, **save_kwargs)
                 variants.append((target_path.relative_to(dist_root).as_posix(), target_width))
-    except Exception:
-        # Some environments or Pillow builds may not support AVIF/WebP encoders.
+    except Exception as exc:
+        logger.warning(
+            "Failed to transcode %s to %s: %s", source_path.name, output_format, exc
+        )
         return []
 
     return variants
@@ -130,11 +136,14 @@ def attach_image_meta(
     root: Path,
     dist_dir: Path,
     responsive_widths: tuple[int, ...],
-) -> None:
+    image_manifest: dict[str, str] | None = None,
+) -> dict[str, str]:
     cache: dict[str, tuple[int | None, int | None]] = {}
     variants_cache: dict[str, list[tuple[str, int]]] = {}
     webp_variants_cache: dict[str, list[tuple[str, int]]] = {}
     avif_variants_cache: dict[str, list[tuple[str, int]]] = {}
+    manifest = dict(image_manifest or {})
+    updated_manifest: dict[str, str] = {}
 
     for post in posts:
         metas: list[ImageMeta] = []
@@ -145,6 +154,17 @@ def attach_image_meta(
 
             if image not in cache:
                 cache[image] = image_dimensions(image_path)
+                current_hash = ""
+                if image_path.exists() and not candidate.is_absolute():
+                    current_hash = hashlib.md5(image_path.read_bytes()).hexdigest()  # noqa: S324
+                    if current_hash != manifest.get(image, ""):
+                        # Source changed — remove old variants so they get regenerated.
+                        dist_path_dir = (dist_dir / candidate).parent
+                        if dist_path_dir.exists():
+                            stem = image_path.stem
+                            for old in dist_path_dir.glob(f"{stem}-*"):
+                                old.unlink(missing_ok=True)
+                updated_manifest[image] = current_hash
                 if candidate.is_absolute():
                     variants_cache[image] = []
                     webp_variants_cache[image] = []
@@ -201,6 +221,8 @@ def attach_image_meta(
             )
 
         post.images_meta = metas
+
+    return updated_manifest
 
 
 def image_src(meta: ImageMeta) -> str:

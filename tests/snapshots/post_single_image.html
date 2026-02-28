@@ -1,86 +1,110 @@
-{% extends "base.html" %}
-{% from "_macros.html" import render_post_image %}
-
-{% block structured_data %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A test excerpt. — Test Blog</title>
+    <meta name="description" content="A test excerpt." />
+    <link rel="canonical" href="https://example.com/2024/06/test-post/" />
+    <meta property="og:site_name" content="Test Blog" />
+    <meta property="og:title" content="A test excerpt. — Test Blog" />
+    <meta property="og:description" content="A test excerpt." />
+    <meta property="og:url" content="https://example.com/2024/06/test-post/" />
+    <meta property="og:type" content="article" />
+      <meta property="og:image" content="https://example.com/static/photo-0.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="A test excerpt. — Test Blog" />
+    <meta name="twitter:description" content="A test excerpt." />
+      <meta name="twitter:image" content="https://example.com/static/photo-0.jpg" />
+    <link
+      rel="alternate"
+      type="application/atom+xml"
+      title="Test Blog"
+      href="../../../feed.xml"
+    />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Test Blog"
+      href="../../../rss.xml"
+    />
+    <link rel="icon" type="image/png" href="../../../favicon.png" />
+      <link
+        rel="preload"
+        as="image"
+        href="../../../static/photo-0.jpg"
+        fetchpriority="high"
+        imagesrcset="../../../static/photo-0-480w.jpg 480w, ../../../static/photo-0.jpg 1200w"
+        imagesizes="(max-width: 720px) 100vw, 520px"
+      />
+    <style>body{}</style>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Article",
-      "headline": {{ (post.title or post.display_date) | tojson }},
-      "datePublished": "{{ post.date.isoformat() }}",
-      {% if site.author %}"author": {"@type": "Person", "name": {{ site.author | tojson }}},{% endif %}
-      {% if page_description %}"description": {{ page_description | tojson }},{% endif %}
-      {% if post.images_meta and site.site_url %}"image": [{% for image in post.images_meta %}"{{ site.site_url }}/{{ image.primary_src or image.path }}"{% if not loop.last %}, {% endif %}{% endfor %}],{% endif %}
-      "mainEntityOfPage": {
+      "headline": "15 Jun 2024",
+      "datePublished": "2024-06-15",
+"author": {"@type": "Person", "name": "Test Author"},"description": "A test excerpt.","image": ["https://example.com/static/photo-0.jpg"],      "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "{{ canonical_url }}"
+        "@id": "https://example.com/2024/06/test-post/"
       }
     }
     </script>
-{% endblock %}
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="page">
+      <header class="site">
+        <span class="title"><a href="../../../">Test Blog</a></span>
+        <span class="tagline"></span>
+      </header>
+      <main id="main">
+  <article class="post photo">
+            <figure><picture>
+          <source
+            type="image/avif"
+            srcset="../../../static/photo-0-480w.avif 480w, ../../../static/photo-0-1200w.avif 1200w"
+            sizes="(max-width: 720px) 100vw, 520px"
+          />
+          <source
+            type="image/webp"
+            srcset="../../../static/photo-0-480w.webp 480w, ../../../static/photo-0-1200w.webp 1200w"
+            sizes="(max-width: 720px) 100vw, 520px"
+          />
+        <img
+          src="../../../static/photo-0.jpg"
+          alt="Alt text 0"
+          loading="eager"
+          fetchpriority="high"
+          srcset="../../../static/photo-0-480w.jpg 480w, ../../../static/photo-0.jpg 1200w"
+          sizes="(max-width: 720px) 100vw, 520px"
+          decoding="async"
+width="1200" height="800"        />
+      </picture></figure>
 
-{% block content %}
-  <article class="post {{ post.layout }}">
-    {% if post.images_meta %}
-      {% set is_gallery = post.images_meta | length > 1 %}
-      {% if is_gallery %}
-        <section class="slideshow" aria-label="Post image slideshow" data-slideshow>
-          <div class="slideshow-viewport">
-            <div class="slideshow-track">
-              {% for image in post.images_meta %}
-                <div class="slide{% if loop.first %} is-active{% endif %}" data-slide>
-                  {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id) }}
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-          <div class="slideshow-nav" aria-label="Slideshow navigation">
-            <button class="slideshow-control prev" type="button" aria-label="Previous photo">‹</button>
-            <span class="slideshow-counter" aria-live="polite">1 / {{ post.images_meta | length }}</span>
-            <button class="slideshow-control next" type="button" aria-label="Next photo">›</button>
-          </div>
-        </section>
-      {% else %}
-        {% for image in post.images_meta %}
-          {{ render_post_image(image, post, assets_prefix, image_sizes, eager_image_ids, lcp_image_id) }}
-        {% endfor %}
-      {% endif %}
-    {% endif %}
-
-    {% if post.excerpt %}
       <div class="excerpt">
-        <p>{{ post.excerpt }}</p>
+        <p>A test excerpt.</p>
       </div>
-    {% endif %}
 
-    {% if post.body_html %}
       <div class="body">
-        {{ post.body_html | safe }}
+        <p>Body content here.</p>
       </div>
-    {% endif %}
 
-    {% if post.location_name or (post.location_latitude is not none and post.location_longitude is not none) %}
       <p class="location">
-        {% if post.location_name %}
-          <span class="location-name">{{ post.location_name }}</span>
-        {% endif %}
-        {% if post.location_latitude is not none and post.location_longitude is not none %}
-          {% if post.location_name %}<span aria-hidden="true"> · </span>{% endif %}
-          <a
-            href="https://maps.google.com/?q={{ post.location_latitude }},{{ post.location_longitude }}"
+          <span class="location-name">Brooklyn, NY</span>
+<span aria-hidden="true"> · </span>          <a
+            href="https://maps.google.com/?q=40.6602,-73.969"
             class="location-coords"
           >
-            {{ "%.5f"|format(post.location_latitude) }}, {{ "%.5f"|format(post.location_longitude) }}
+            40.66020, -73.96900
           </a>
-        {% endif %}
       </p>
-    {% endif %}
 
-    <p class="meta"><time datetime="{{ post.date.isoformat() }}">{{ post.display_date }}</time></p>
+    <p class="meta"><time datetime="2024-06-15">15 Jun 2024</time></p>
   </article>
 
   <nav class="feed-nav" aria-label="Post navigation">
-    <a href="{{ assets_prefix }}/">Back to feed</a>
+    <a href="../../../">Back to feed</a>
   </nav>
 
   <script>
@@ -208,4 +232,10 @@
       });
     })();
   </script>
-{% endblock %}
+      </main>
+      <footer class="footer">
+        &copy; YYYY
+      </footer>
+    </div>
+  </body>
+</html>

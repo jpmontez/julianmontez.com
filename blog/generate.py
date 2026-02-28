@@ -4,7 +4,13 @@ import argparse
 import sys
 from pathlib import Path
 
-from blog.assets import copy_assets, ensure_empty_dir
+from blog.assets import (
+    copy_assets,
+    file_content_hash,
+    load_image_manifest,
+    prepare_dist,
+    save_image_manifest,
+)
 from blog.config import apply_cli_overrides, load_site_config
 from blog.content import collect_posts
 from blog.feeds import write_feeds
@@ -44,6 +50,12 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Override base URL used for feed self links (e.g. http://localhost:8080).",
     )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        default=False,
+        help="Wipe dist/ completely before building (disables incremental image caching).",
+    )
     args = parser.parse_args(argv)
 
     if not args.config.exists():
@@ -60,19 +72,26 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
-    site = site.with_runtime(inline_style=PATHS.theme_path.read_text(encoding="utf-8"))
+    fav_hash = file_content_hash(PATHS.favicon_path) if PATHS.favicon_path.exists() else ""
+    site = site.with_runtime(
+        inline_style=PATHS.theme_path.read_text(encoding="utf-8"),
+        favicon_hash=fav_hash,
+    )
     url_ctx = UrlContext.from_site(site)
 
-    ensure_empty_dir(PATHS.dist_dir)
+    prev_manifest = load_image_manifest(PATHS.dist_dir) if not args.clean else {}
+    prepare_dist(PATHS.dist_dir, clean=args.clean)
     copy_assets(PATHS, site)
 
     posts = collect_posts(PATHS.posts_dir)
-    attach_image_meta(
+    new_manifest = attach_image_meta(
         posts,
         root=PATHS.root,
         dist_dir=PATHS.dist_dir,
         responsive_widths=site.responsive_widths,
+        image_manifest=prev_manifest,
     )
+    save_image_manifest(PATHS.dist_dir, new_manifest)
 
     env = make_env(PATHS.templates_dir)
     build_site(posts, site=site, env=env, url_ctx=url_ctx, dist_dir=PATHS.dist_dir)
