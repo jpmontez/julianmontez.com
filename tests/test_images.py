@@ -58,5 +58,162 @@ class ImageTests(unittest.TestCase):
                 self.assertTrue((dist_dir / "static" / "photo-120w.avif").exists())
 
 
+    def test_attach_image_meta_no_images(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dist_dir = root / "dist"
+            dist_dir.mkdir()
+
+            post = Post(
+                source=Path("post.md"),
+                title="No Images",
+                date=dt.date(2024, 1, 1),
+                images=[],
+                image_alts=[],
+                excerpt=None,
+                layout="photo",
+                body_html="",
+                display_date="01 Jan 2024",
+                url="2024/01/no-images/",
+                slug="no-images",
+            )
+            attach_image_meta([post], root=root, dist_dir=dist_dir, responsive_widths=(480,))
+            self.assertEqual(post.images_meta, [])
+
+    def test_all_widths_larger_than_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            static_dir = root / "static"
+            static_dir.mkdir()
+            dist_dir = root / "dist"
+            dist_dir.mkdir()
+
+            source = static_dir / "tiny.jpg"
+            Image.new("RGB", (50, 50), color=(128, 128, 128)).save(source)
+
+            post = Post(
+                source=Path("post.md"),
+                title="Tiny",
+                date=dt.date(2024, 1, 1),
+                images=["static/tiny.jpg"],
+                image_alts=[None],
+                excerpt=None,
+                layout="photo",
+                body_html="",
+                display_date="01 Jan 2024",
+                url="2024/01/tiny/",
+                slug="tiny",
+            )
+            attach_image_meta(
+                [post], root=root, dist_dir=dist_dir, responsive_widths=(200, 400, 800)
+            )
+            meta = post.images_meta[0]
+            # Only the original width should be in the srcset (no upscaling)
+            widths = [w for _, w in meta.srcset]
+            self.assertEqual(widths, [50])
+
+    def test_missing_image_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dist_dir = root / "dist"
+            dist_dir.mkdir()
+
+            post = Post(
+                source=Path("post.md"),
+                title="Missing",
+                date=dt.date(2024, 1, 1),
+                images=["static/nonexistent.jpg"],
+                image_alts=[None],
+                excerpt=None,
+                layout="photo",
+                body_html="",
+                display_date="01 Jan 2024",
+                url="2024/01/missing/",
+                slug="missing",
+            )
+            attach_image_meta(
+                [post], root=root, dist_dir=dist_dir, responsive_widths=(480,)
+            )
+            meta = post.images_meta[0]
+            self.assertIsNone(meta.width)
+            self.assertIsNone(meta.height)
+
+    def test_manifest_cache_hit_skips_regeneration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            static_dir = root / "static"
+            static_dir.mkdir()
+            dist_dir = root / "dist"
+            dist_dir.mkdir()
+
+            source = static_dir / "cached.jpg"
+            Image.new("RGB", (200, 100), color=(0, 0, 0)).save(source)
+
+            import hashlib
+
+            source_hash = hashlib.md5(source.read_bytes()).hexdigest()  # noqa: S324
+            manifest = {"static/cached.jpg": source_hash}
+
+            post = Post(
+                source=Path("post.md"),
+                title="Cached",
+                date=dt.date(2024, 1, 1),
+                images=["static/cached.jpg"],
+                image_alts=[None],
+                excerpt=None,
+                layout="photo",
+                body_html="",
+                display_date="01 Jan 2024",
+                url="2024/01/cached/",
+                slug="cached",
+            )
+            new_manifest = attach_image_meta(
+                [post],
+                root=root,
+                dist_dir=dist_dir,
+                responsive_widths=(100,),
+                image_manifest=manifest,
+            )
+            # Manifest entry should be unchanged (same hash)
+            self.assertEqual(new_manifest["static/cached.jpg"], source_hash)
+
+    def test_manifest_cache_miss_regenerates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            static_dir = root / "static"
+            static_dir.mkdir()
+            dist_dir = root / "dist"
+            dist_dir.mkdir()
+
+            source = static_dir / "changed.jpg"
+            Image.new("RGB", (200, 100), color=(0, 0, 0)).save(source)
+
+            # Stale hash that doesn't match current content
+            manifest = {"static/changed.jpg": "stale_hash_value"}
+
+            post = Post(
+                source=Path("post.md"),
+                title="Changed",
+                date=dt.date(2024, 1, 1),
+                images=["static/changed.jpg"],
+                image_alts=[None],
+                excerpt=None,
+                layout="photo",
+                body_html="",
+                display_date="01 Jan 2024",
+                url="2024/01/changed/",
+                slug="changed",
+            )
+            new_manifest = attach_image_meta(
+                [post],
+                root=root,
+                dist_dir=dist_dir,
+                responsive_widths=(100,),
+                image_manifest=manifest,
+            )
+            # Hash should be updated (not the stale value)
+            self.assertNotEqual(new_manifest["static/changed.jpg"], "stale_hash_value")
+
+
 if __name__ == "__main__":
     unittest.main()

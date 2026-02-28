@@ -30,6 +30,8 @@
             <a
               href="https://maps.google.com/?q={{ post.location_latitude }},{{ post.location_longitude }}"
               class="location-coords"
+              aria-label="View on Google Maps"
+              rel="noopener"
             >
               {{ "%.5f"|format(post.location_latitude) }}, {{ "%.5f"|format(post.location_longitude) }}
             </a>

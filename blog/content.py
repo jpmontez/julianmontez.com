@@ -9,7 +9,7 @@ from blog.models import Post
 
 try:  # Prefer the markdown package but keep a basic fallback.
     import markdown  # type: ignore
-except Exception:  # pragma: no cover - fallback is intentionally simple.
+except ImportError:  # pragma: no cover - fallback is intentionally simple.
     markdown = None
 
 
@@ -20,10 +20,10 @@ def render_markdown(text: str) -> str:
     return markdown.markdown(text, extensions=["extra"])
 
 
-def parse_front_matter(raw: str) -> tuple[dict, str]:
+def parse_front_matter(raw: str, source: Path | None = None) -> tuple[dict, str]:
     lines = raw.splitlines()
     if not lines:
-        raise ValueError("Empty post")
+        raise ValueError(f"Empty post: {source}" if source else "Empty post")
 
     delimiter = lines[0].strip()
     if delimiter not in ("+++", "++++"):
@@ -139,7 +139,7 @@ def parse_location(meta: dict, source: Path) -> tuple[str | None, float | None, 
 
 def parse_post(path: Path) -> Post:
     raw = path.read_text(encoding="utf-8")
-    meta, body_md = parse_front_matter(raw)
+    meta, body_md = parse_front_matter(raw, source=path)
 
     try:
         date = dt.date.fromisoformat(str(meta["date"]))

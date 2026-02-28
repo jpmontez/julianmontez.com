@@ -239,5 +239,64 @@ class FeedTests(unittest.TestCase):
             self.assertEqual(len(channel.findall("item")), 0)
 
 
+    def test_special_characters_escaped_in_feeds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dist_dir = Path(tmp) / "dist"
+            dist_dir.mkdir()
+
+            site = SiteConfig(
+                title="Blog & <Friends>",
+                description='A "great" blog',
+                author="O'Reilly & Sons",
+                site_url="http://localhost:8080",
+                feed_max_posts=25,
+            )
+            post = Post(
+                source=Path("post.md"),
+                title='Title with & < > "quotes"',
+                date=dt.date(2024, 1, 2),
+                images=["static/photo.jpg"],
+                image_alts=['Alt with & < > "special"'],
+                excerpt='Excerpt with & < > "chars"',
+                layout="photo",
+                body_html="<p>Body &amp; more</p>",
+                display_date="02 Jan 2024",
+                url="2024/01/special/",
+                slug="special",
+                images_meta=[
+                    ImageMeta(
+                        path="static/photo.jpg",
+                        width=800,
+                        height=600,
+                        srcset=[("static/photo.jpg", 800)],
+                        primary_src="static/photo.jpg",
+                        alt='Alt with & < > "special"',
+                    )
+                ],
+            )
+
+            write_feeds([post], site=site, url_ctx=UrlContext.from_site(site), dist_dir=dist_dir)
+
+            # Both feeds should be valid XML (parser would raise on unescaped chars)
+            atom = ET.parse(dist_dir / "feed.xml").getroot()
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            entry = atom.find("atom:entry", ns)
+            self.assertIsNotNone(entry)
+            assert entry is not None
+
+            title_text = entry.findtext("{http://www.w3.org/2005/Atom}title")
+            self.assertIn("&", title_text or "")
+            self.assertIn("<", title_text or "")
+            self.assertIn('"', title_text or "")
+
+            rss = ET.parse(dist_dir / "rss.xml").getroot()
+            channel = rss.find("channel")
+            assert channel is not None
+            item = channel.find("item")
+            assert item is not None
+            rss_title = item.findtext("title")
+            self.assertIn("&", rss_title or "")
+
+
 if __name__ == "__main__":
     unittest.main()

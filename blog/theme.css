@@ -208,7 +208,6 @@ article.post {
   scrollbar-width: none;
   padding: 4px max(18px, calc((100vw - 520px) / 2)) 8px;
   scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
   align-items: center;
 }
 
@@ -236,7 +235,7 @@ article.post {
 
 .post .slideshow-viewport {
   width: 100%;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .post .slideshow-track {
