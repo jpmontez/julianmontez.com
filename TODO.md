@@ -1,12 +1,14 @@
 # TODO
 
-- Consider enhancing slideshow interaction (counters or lightbox).
+- Consider adding a lightbox/zoom interaction for multi-image post pages.
 - Add snapshot/golden tests for generated HTML pages to catch template regressions beyond structural unit tests.
 - Keep monitoring mobile LCP as new content lands; adjust `responsive_widths`/`image_sizes` only if audits regress.
 - Iterate on body typography using the new sample post and decide final mobile/desktop type scale.
 - Backfill optional `location` metadata (name + lat/lon) for older posts where known.
 
 Completed (keep below active items):
+- ~~Fix intermittent slideshow flicker on view-transition navigation (CSS initial transform pre-centering).~~
+- ~~Visual design polish: header hierarchy, inactive-slide dimming/scale, feed hover, arrow affordance, footer spacing.~~
 - ~~Set post body copy to a Helvetica-first sans-serif stack.~~
 - ~~Generate AVIF/WebP responsive transcodes and render photos with `<picture>` + JPEG fallback.~~
 - ~~Increase base text size only for mobile devices (coarse pointer + max-width media query).~~

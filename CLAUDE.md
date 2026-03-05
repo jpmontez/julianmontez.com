@@ -13,13 +13,21 @@ After completing work: update `HANDOFF.md` (what you did and what's next) and `T
 
 ## Commands
 
+> **Warning:** `make` is shadowed by a broken Prezto stub in Claude Code shell sessions — never use it. Use the `uv run` equivalents below instead.
+
 ```bash
-make build          # install deps + generate site
-make preview        # build with preview URL overrides + serve on http://localhost:8080
-make test           # run unit tests
-make check          # format + lint (ruff)
-make regen          # clean dist + rebuild
-make import         # import Lightroom JPG exports (see README)
+# Build
+uv run generate-blog
+
+# Preview (build + serve at http://localhost:8080)
+uv run generate-blog --site-url http://localhost:8080 --feed-self-url http://localhost:8080
+uv run python -m http.server 8080 -d blog/dist
+
+# Tests
+uv run python -m unittest discover -s tests
+
+# Format + lint
+uv run ruff format && uv run ruff check
 
 # Run a single test file
 uv run python -m unittest tests/test_content.py
@@ -49,6 +57,12 @@ models.py   → shared dataclasses (Post, ImageVariant, etc.)
 - Post titles are intentionally hidden in rendered output; visible only in metadata/feeds
 - Multi-image posts render as a horizontal slideshow; single-image posts keep the same click behavior (no file navigation)
 - `blog/config.toml` controls `site_url` (canonical origin for absolute URLs), `eager_images` (LCP optimization), and `responsive_widths`
+
+**View transitions & slideshow patterns (`blog/theme.css`, `blog/templates/post.html`):**
+- Cross-document view transitions enabled via `@view-transition { navigation: auto }` (CSS only)
+- `.slideshow-track` has a CSS initial `transform: translateX(calc(...))` — **do not remove it**. It pre-centers slide 0 so the view-transition "new" snapshot is already correct before `snapCenter()` JS runs. Three breakpoint formulas cover desktop/mid/small viewports; all must match `snapCenter()`'s runtime output exactly or a visible jump will appear at crossfade end.
+- Inactive slides use `opacity: 0.55; transform: scale(0.97)` to visually focus the active slide; these are CSS class-based (`.is-active`) and animated with the same easing as the track transition.
+- `snapCenter()` (inline JS in `post.html`) uses `transition: none` → `centerSlide()` → force reflow → restore transition to reposition without animation. This pattern must be preserved for resize/load events.
 
 ## Content Format
 

@@ -3,7 +3,7 @@
   --ink: #333333;
   --muted: #757575;
   --accent: #111111;
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
 }
 
 .skip-link {
@@ -78,15 +78,17 @@ textarea:focus-visible {
 
 header.site {
   text-align: center;
-  margin-bottom: 64px;
+  margin-bottom: 44px;
   text-transform: uppercase;
   font-size: 11px;
 }
 
 header.site .title {
   display: block;
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 36px;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
 }
 
 header.site .title a {
@@ -101,6 +103,7 @@ header.site .title a:hover {
 
 header.site .tagline {
   text-transform: initial;
+  color: var(--muted);
 }
 
 article.post {
@@ -115,6 +118,7 @@ article.post {
 .post .meta {
   color: var(--muted);
   text-transform: initial;
+  margin-top: 10px;
 }
 
 .post .meta a {
@@ -161,6 +165,14 @@ article.post {
 
 .post .post-image-link {
   display: block;
+}
+
+.post .post-image-link img {
+  transition: opacity 180ms ease;
+}
+
+.post .post-image-link:hover img {
+  opacity: 0.88;
 }
 
 .post .excerpt {
@@ -244,16 +256,26 @@ article.post {
   align-items: center;
   transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
+  /* Pre-center slide 0 via CSS so the view-transition snapshot is already
+     correct before snapCenter() runs. Formula: (viewport - 2*padding - slideW) / 2
+     Desktop: (100vw - 72px - 520px) / 2 = 50vw - 296px */
+  transform: translateX(calc(50vw - 296px));
 }
 
 .post .slideshow .slide {
   flex: 0 0 auto;
   width: min(520px, 90vw);
   cursor: pointer;
+  opacity: 0.55;
+  transform: scale(0.97);
+  transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .post .slideshow .slide.is-active {
   cursor: pointer;
+  opacity: 1;
+  transform: scale(1);
 }
 
 .post .slideshow figure {
@@ -265,12 +287,12 @@ article.post {
   border: none;
   background: transparent;
   color: #4f4f4f;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 400;
   line-height: 1;
-  padding: 0;
+  padding: 6px 10px;
   cursor: pointer;
-  opacity: 0.82;
+  opacity: 0.7;
   transition: opacity 160ms ease;
 }
 
@@ -340,7 +362,7 @@ article.post {
 }
 
 .footer {
-  margin-top: 40px;
+  margin-top: 20px;
   text-align: center;
   color: var(--muted);
   font-size: 11px;
@@ -388,12 +410,24 @@ article.post {
     padding: 0 28px;
   }
 
+  /* Mobile (578px–720px): padding=28px, slide=520px → (100vw - 56px - 520px) / 2 = 50vw - 288px */
+  .post .slideshow-track {
+    transform: translateX(calc(50vw - 288px));
+  }
+
   .post .slideshow-control {
     font-size: 18px;
   }
 
   .post .body {
     max-width: 100%;
+  }
+}
+
+/* Small viewport: slide = 90vw → (100vw - 56px - 90vw) / 2 = 5vw - 28px */
+@media (max-width: 577px) {
+  .post .slideshow-track {
+    transform: translateX(calc(5vw - 28px));
   }
 }
 
@@ -406,5 +440,13 @@ article.post {
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;
+  }
+
+  .post .slideshow .slide {
+    transition: none;
+  }
+
+  .post .post-image-link img {
+    transition: none;
   }
 }

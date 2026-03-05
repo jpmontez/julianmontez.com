@@ -1,7 +1,7 @@
 # Project Snapshot
 Static Tumblr-style microblog generator in Python (uv-managed), publishing static output to `blog/dist` for Cloudflare Pages.
 
-Last updated: 2026-02-27
+Last updated: 2026-03-05
 
 # Current State
 - Generator architecture is modular:
@@ -29,6 +29,10 @@ Last updated: 2026-02-27
 - `uv run ruff check`: pass
 - `uv run generate-blog`: pass
 - `make preview`: pass (uses `uv run python -m http.server`)
+
+# Recent Changes
+- Fixed intermittent slideshow flicker on view-transition navigation (Mar 2026): added CSS initial transforms to `.post .slideshow-track` in `theme.css` so the browser's view-transition "new" snapshot captures the correctly-centered slide 0 position before JS runs. Three breakpoints with exact formulas verified against `snapCenter()` output.
+- Visual design polish pass (Mar 2026): header name larger (13px) with letter-spacing and tagline demoted to muted color; reduced header dead zone; increased box-shadow opacity; inactive slideshow slides dim to opacity 0.55 + scale(0.97) to focus the active image; feed image hover opacity feedback; larger slideshow arrow hit-area; date metadata margin; footer closer to nav. All with `prefers-reduced-motion` overrides.
 
 # Open Challenges & Risks
 - Gallery UX is still basic horizontal scrolling; no dedicated lightbox/zoom flow yet.
