@@ -16,3 +16,4 @@ __pycache__/
 
 # Misc.
 _refs/
+.worktrees/
