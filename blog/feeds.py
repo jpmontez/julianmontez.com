@@ -12,6 +12,16 @@ from blog.render import normalize_meta_text
 from blog.urls import UrlContext
 
 
+def _trim_posts(posts: list[Post], max_posts: int) -> list[Post]:
+    return posts[:max_posts] if max_posts else []
+
+
+def _write_xml_file(tree: ET.ElementTree, path: Path) -> None:
+    ET.indent(tree, space="  ")
+    tree.write(path, encoding="utf-8", xml_declaration=True)
+    path.write_text(path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8")
+
+
 def format_rfc3339(value: dt.date | dt.datetime) -> str:
     if isinstance(value, dt.date) and not isinstance(value, dt.datetime):
         value = dt.datetime(value.year, value.month, value.day, tzinfo=dt.timezone.utc)
@@ -55,19 +65,15 @@ def render_feed_post_html(post: Post, url_ctx: UrlContext) -> str:
 def write_atom_feed(
     posts: list[Post], *, site: SiteConfig, url_ctx: UrlContext, dist_dir: Path
 ) -> None:
-    max_posts = site.feed_max_posts
-    feed_posts = posts[:max_posts] if max_posts else []
-
-    def loc(path: str) -> str:
-        return url_ctx.page(path)
+    feed_posts = _trim_posts(posts, site.feed_max_posts)
 
     atom_ns = "http://www.w3.org/2005/Atom"
     ET.register_namespace("", atom_ns)
     feed_el = ET.Element(f"{{{atom_ns}}}feed")
 
     ET.SubElement(feed_el, f"{{{atom_ns}}}title").text = site.title
-    ET.SubElement(feed_el, f"{{{atom_ns}}}id").text = loc("")
-    ET.SubElement(feed_el, f"{{{atom_ns}}}link", {"href": loc("")})
+    ET.SubElement(feed_el, f"{{{atom_ns}}}id").text = url_ctx.page("")
+    ET.SubElement(feed_el, f"{{{atom_ns}}}link", {"href": url_ctx.page("")})
     ET.SubElement(
         feed_el,
         f"{{{atom_ns}}}link",
@@ -84,7 +90,7 @@ def write_atom_feed(
 
     for post in feed_posts:
         entry_el = ET.SubElement(feed_el, f"{{{atom_ns}}}entry")
-        post_url = loc(post.url)
+        post_url = url_ctx.page(post.url)
 
         ET.SubElement(entry_el, f"{{{atom_ns}}}title").text = feed_post_title(post)
         ET.SubElement(entry_el, f"{{{atom_ns}}}id").text = post_url
@@ -102,21 +108,13 @@ def write_atom_feed(
             content_el = ET.SubElement(entry_el, f"{{{atom_ns}}}content", {"type": "html"})
             content_el.text = content_html
 
-    feed_path = dist_dir / "feed.xml"
-    tree = ET.ElementTree(feed_el)
-    ET.indent(tree, space="  ")
-    tree.write(feed_path, encoding="utf-8", xml_declaration=True)
-    feed_path.write_text(feed_path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8")
+    _write_xml_file(ET.ElementTree(feed_el), dist_dir / "feed.xml")
 
 
 def write_rss_feed(
     posts: list[Post], *, site: SiteConfig, url_ctx: UrlContext, dist_dir: Path
 ) -> None:
-    max_posts = site.feed_max_posts
-    feed_posts = posts[:max_posts] if max_posts else []
-
-    def loc(path: str) -> str:
-        return url_ctx.page(path)
+    feed_posts = _trim_posts(posts, site.feed_max_posts)
 
     atom_ns = "http://www.w3.org/2005/Atom"
     ET.register_namespace("atom", atom_ns)
@@ -125,7 +123,7 @@ def write_rss_feed(
     channel = ET.SubElement(rss_root, "channel")
 
     ET.SubElement(channel, "title").text = site.title
-    ET.SubElement(channel, "link").text = loc("")
+    ET.SubElement(channel, "link").text = url_ctx.page("")
     ET.SubElement(
         channel,
         f"{{{atom_ns}}}link",
@@ -138,7 +136,7 @@ def write_rss_feed(
 
     for post in feed_posts:
         item = ET.SubElement(channel, "item")
-        post_url = loc(post.url)
+        post_url = url_ctx.page(post.url)
         ET.SubElement(item, "title").text = feed_post_title(post)
         ET.SubElement(item, "link").text = post_url
         guid = ET.SubElement(item, "guid", {"isPermaLink": "true"})
@@ -150,11 +148,7 @@ def write_rss_feed(
             description = normalize_meta_text(str(post.excerpt or post.title or "")) or post_url
         ET.SubElement(item, "description").text = description
 
-    rss_path = dist_dir / "rss.xml"
-    tree = ET.ElementTree(rss_root)
-    ET.indent(tree, space="  ")
-    tree.write(rss_path, encoding="utf-8", xml_declaration=True)
-    rss_path.write_text(rss_path.read_text(encoding="utf-8").rstrip() + "\n", encoding="utf-8")
+    _write_xml_file(ET.ElementTree(rss_root), dist_dir / "rss.xml")
 
 
 def write_feeds(

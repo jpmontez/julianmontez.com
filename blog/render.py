@@ -120,18 +120,24 @@ def _post_page_title(post: Post, site: SiteConfig) -> str:
     return f"{title} — {site.title}"
 
 
-def build_site(
+def _og_image(post: Post) -> str | None:
+    """Return the OG image path for a post, preferring the primary (processed) src."""
+    return (
+        (post.images_meta[0].primary_src or post.images_meta[0].path) if post.images_meta else None
+    )
+
+
+def _build_index_pages(
     posts: list[Post],
     *,
     site: SiteConfig,
     env: Environment,
     url_ctx: UrlContext,
     dist_dir: Path,
+    now: dt.datetime,
+    eager_images_count: int,
+    total_pages: int,
 ) -> None:
-    now = dt.datetime.now(dt.timezone.utc)
-    eager_images_count = site.eager_images
-    total_pages = max(1, math.ceil(len(posts) / site.posts_per_page))
-
     for page_num in range(1, total_pages + 1):
         start = (page_num - 1) * site.posts_per_page
         end = start + site.posts_per_page
@@ -167,11 +173,7 @@ def build_site(
                 page_path="" if page_num == 1 else f"page/{page_num}/",
                 page_description=site.description,
                 og_type="website",
-                og_image_path=(
-                    (page_posts[0].images_meta[0].primary_src or page_posts[0].images_meta[0].path)
-                    if page_posts and page_posts[0].images_meta
-                    else None
-                ),
+                og_image_path=_og_image(page_posts[0]) if page_posts else None,
                 preload_image=preload,
                 payload={
                     "posts": page_posts,
@@ -187,6 +189,17 @@ def build_site(
             dist_dir=dist_dir,
         )
 
+
+def _build_post_pages(
+    posts: list[Post],
+    *,
+    site: SiteConfig,
+    env: Environment,
+    url_ctx: UrlContext,
+    dist_dir: Path,
+    now: dt.datetime,
+    eager_images_count: int,
+) -> None:
     for post in posts:
         out_dir = dist_dir / str(post.date.year) / f"{post.date.month:02d}" / post.slug
         output_file = out_dir / "index.html"
@@ -207,11 +220,7 @@ def build_site(
                 page_path=post.url,
                 page_description=_infer_post_description(post, site),
                 og_type="article",
-                og_image_path=(
-                    (post.images_meta[0].primary_src or post.images_meta[0].path)
-                    if post.images_meta
-                    else None
-                ),
+                og_image_path=_og_image(post),
                 preload_image=preload,
                 payload={
                     "post": post,
@@ -225,3 +234,35 @@ def build_site(
             url_ctx=url_ctx,
             dist_dir=dist_dir,
         )
+
+
+def build_site(
+    posts: list[Post],
+    *,
+    site: SiteConfig,
+    env: Environment,
+    url_ctx: UrlContext,
+    dist_dir: Path,
+) -> None:
+    now = dt.datetime.now(dt.timezone.utc)
+    eager_images_count = site.eager_images
+    total_pages = max(1, math.ceil(len(posts) / site.posts_per_page))
+    _build_index_pages(
+        posts,
+        site=site,
+        env=env,
+        url_ctx=url_ctx,
+        dist_dir=dist_dir,
+        now=now,
+        eager_images_count=eager_images_count,
+        total_pages=total_pages,
+    )
+    _build_post_pages(
+        posts,
+        site=site,
+        env=env,
+        url_ctx=url_ctx,
+        dist_dir=dist_dir,
+        now=now,
+        eager_images_count=eager_images_count,
+    )

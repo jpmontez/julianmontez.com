@@ -113,9 +113,7 @@ class SnapshotTests(unittest.TestCase):
             return
 
         if not snapshot_path.exists():
-            self.fail(
-                f"Snapshot {name} does not exist. Run with UPDATE_SNAPSHOTS=1 to create it."
-            )
+            self.fail(f"Snapshot {name} does not exist. Run with UPDATE_SNAPSHOTS=1 to create it.")
 
         expected = snapshot_path.read_text(encoding="utf-8")
         if actual != expected:

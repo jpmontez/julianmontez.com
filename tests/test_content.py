@@ -86,22 +86,18 @@ Body
         self.assertIsNone(lon)
 
     def test_parse_location_boundary_coordinates(self) -> None:
-        name, lat, lon = parse_location(
-            {"location": {"lat": 90.0, "lon": -180.0}}, Path("post.md")
-        )
+        name, lat, lon = parse_location({"location": {"lat": 90.0, "lon": -180.0}}, Path("post.md"))
         self.assertIsNone(name)
         self.assertEqual(lat, 90.0)
         self.assertEqual(lon, -180.0)
 
     def test_parse_location_zero_coordinates(self) -> None:
-        name, lat, lon = parse_location(
-            {"location": {"lat": 0, "lon": 0}}, Path("post.md")
-        )
+        name, lat, lon = parse_location({"location": {"lat": 0, "lon": 0}}, Path("post.md"))
         self.assertEqual(lat, 0.0)
         self.assertEqual(lon, 0.0)
 
     def test_parse_front_matter_no_body(self) -> None:
-        raw = "+++\ntitle = \"No body\"\ndate = 2024-01-01\n+++\n"
+        raw = '+++\ntitle = "No body"\ndate = 2024-01-01\n+++\n'
         meta, body = parse_front_matter(raw)
         self.assertEqual(meta["title"], "No body")
         self.assertEqual(body, "")
@@ -115,7 +111,7 @@ Body
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "no-images.md"
             path.write_text(
-                "+++\ndate = 2024-06-15\ntitle = \"No images\"\n+++\n\nSome text.\n",
+                '+++\ndate = 2024-06-15\ntitle = "No images"\n+++\n\nSome text.\n',
                 encoding="utf-8",
             )
             post = parse_post(path)

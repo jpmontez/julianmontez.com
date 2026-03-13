@@ -29,7 +29,7 @@ class ImageMeta:
         return None
 
 
-@dataclass
+@dataclass(frozen=True)
 class Post:
     source: Path
     title: str | None

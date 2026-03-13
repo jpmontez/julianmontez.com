@@ -84,7 +84,6 @@ class FeedTests(unittest.TestCase):
             item_link = items[0].findtext("link")
             self.assertEqual(item_link, "http://localhost:8080/2024/01/hello/")
 
-
     def test_atom_feed_has_required_elements(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             dist_dir = Path(tmp) / "dist"
@@ -237,7 +236,6 @@ class FeedTests(unittest.TestCase):
             channel = rss.find("channel")
             assert channel is not None
             self.assertEqual(len(channel.findall("item")), 0)
-
 
     def test_special_characters_escaped_in_feeds(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

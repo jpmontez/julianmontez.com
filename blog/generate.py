@@ -84,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
     copy_assets(PATHS, site)
 
     posts = collect_posts(PATHS.posts_dir)
-    new_manifest = attach_image_meta(
+    posts, new_manifest = attach_image_meta(
         posts,
         root=PATHS.root,
         dist_dir=PATHS.dist_dir,

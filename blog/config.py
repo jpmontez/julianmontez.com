@@ -13,10 +13,7 @@ from blog.models import (
     DEFAULT_RESPONSIVE_WIDTHS,
     SiteConfig,
 )
-
-
-def _is_absolute_url(value: str) -> bool:
-    return value.startswith(("http://", "https://"))
+from blog.urls import is_absolute_url
 
 
 def _ensure_absolute_http_url(field_name: str, value: str) -> str:
@@ -66,7 +63,7 @@ def validate_site_config(site: SiteConfig) -> SiteConfig:
         site_url = _ensure_absolute_http_url("site_url", site_url)
 
     if base_url:
-        if _is_absolute_url(base_url):
+        if is_absolute_url(base_url):
             base_url = _ensure_absolute_http_url("base_url", base_url)
         else:
             if " " in base_url:
@@ -78,7 +75,7 @@ def validate_site_config(site: SiteConfig) -> SiteConfig:
                 base_url = ""
 
     if feed_self_url:
-        if _is_absolute_url(feed_self_url):
+        if is_absolute_url(feed_self_url):
             feed_self_url = _ensure_absolute_http_url("feed_self_url", feed_self_url)
         else:
             if " " in feed_self_url:

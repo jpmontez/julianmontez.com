@@ -109,7 +109,9 @@ def parse_location(meta: dict, source: Path) -> tuple[str | None, float | None, 
     longitude_raw = raw.get("lon", raw.get("lng", raw.get("longitude")))
 
     if (latitude_raw is None) != (longitude_raw is None):
-        raise ValueError(f"Invalid location in {source}: latitude/longitude must be provided together")
+        raise ValueError(
+            f"Invalid location in {source}: latitude/longitude must be provided together"
+        )
 
     latitude = (
         _parse_coordinate(

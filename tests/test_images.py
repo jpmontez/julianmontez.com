@@ -1,4 +1,5 @@
 import datetime as dt
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -34,12 +35,12 @@ class ImageTests(unittest.TestCase):
                 url="2024/01/image-test/",
                 slug="image-test",
             )
-            attach_image_meta(
+            posts, _ = attach_image_meta(
                 [post], root=root, dist_dir=dist_dir, responsive_widths=(50, 100, 200)
             )
 
-            self.assertEqual(len(post.images_meta), 1)
-            meta = post.images_meta[0]
+            self.assertEqual(len(posts[0].images_meta), 1)
+            meta = posts[0].images_meta[0]
             self.assertEqual(meta.width, 120)
             self.assertEqual(meta.height, 80)
             widths = [width for _, width in meta.srcset]
@@ -56,7 +57,6 @@ class ImageTests(unittest.TestCase):
                 avif_widths = [width for _, width in meta.avif_srcset]
                 self.assertEqual(avif_widths, [50, 100, 120])
                 self.assertTrue((dist_dir / "static" / "photo-120w.avif").exists())
-
 
     def test_attach_image_meta_no_images(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -77,8 +77,10 @@ class ImageTests(unittest.TestCase):
                 url="2024/01/no-images/",
                 slug="no-images",
             )
-            attach_image_meta([post], root=root, dist_dir=dist_dir, responsive_widths=(480,))
-            self.assertEqual(post.images_meta, [])
+            posts, _ = attach_image_meta(
+                [post], root=root, dist_dir=dist_dir, responsive_widths=(480,)
+            )
+            self.assertEqual(posts[0].images_meta, [])
 
     def test_all_widths_larger_than_source(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,10 +106,10 @@ class ImageTests(unittest.TestCase):
                 url="2024/01/tiny/",
                 slug="tiny",
             )
-            attach_image_meta(
+            posts, _ = attach_image_meta(
                 [post], root=root, dist_dir=dist_dir, responsive_widths=(200, 400, 800)
             )
-            meta = post.images_meta[0]
+            meta = posts[0].images_meta[0]
             # Only the original width should be in the srcset (no upscaling)
             widths = [w for _, w in meta.srcset]
             self.assertEqual(widths, [50])
@@ -131,10 +133,10 @@ class ImageTests(unittest.TestCase):
                 url="2024/01/missing/",
                 slug="missing",
             )
-            attach_image_meta(
+            posts, _ = attach_image_meta(
                 [post], root=root, dist_dir=dist_dir, responsive_widths=(480,)
             )
-            meta = post.images_meta[0]
+            meta = posts[0].images_meta[0]
             self.assertIsNone(meta.width)
             self.assertIsNone(meta.height)
 
@@ -148,8 +150,6 @@ class ImageTests(unittest.TestCase):
 
             source = static_dir / "cached.jpg"
             Image.new("RGB", (200, 100), color=(0, 0, 0)).save(source)
-
-            import hashlib
 
             source_hash = hashlib.md5(source.read_bytes()).hexdigest()  # noqa: S324
             manifest = {"static/cached.jpg": source_hash}
@@ -167,7 +167,7 @@ class ImageTests(unittest.TestCase):
                 url="2024/01/cached/",
                 slug="cached",
             )
-            new_manifest = attach_image_meta(
+            posts, new_manifest = attach_image_meta(
                 [post],
                 root=root,
                 dist_dir=dist_dir,
@@ -204,7 +204,7 @@ class ImageTests(unittest.TestCase):
                 url="2024/01/changed/",
                 slug="changed",
             )
-            new_manifest = attach_image_meta(
+            posts, new_manifest = attach_image_meta(
                 [post],
                 root=root,
                 dist_dir=dist_dir,
@@ -213,6 +213,31 @@ class ImageTests(unittest.TestCase):
             )
             # Hash should be updated (not the stale value)
             self.assertNotEqual(new_manifest["static/changed.jpg"], "stale_hash_value")
+
+    def test_transcoded_variants_returns_empty_on_error(self) -> None:
+        from unittest.mock import patch
+        from blog.images import generate_transcoded_variants
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "photo.jpg"
+            # Create a real file so path checks pass, but mock Image.open to fail
+            source.write_bytes(b"not a real image")
+            dist = root / "dist" / "static" / "photo.jpg"
+
+            with patch("blog.images.Image.open", side_effect=OSError("boom")):
+                result = generate_transcoded_variants(
+                    source_path=source,
+                    dist_path=dist,
+                    widths=(100,),
+                    original=(200, 100),
+                    dist_root=root / "dist",
+                    output_format="WEBP",
+                    output_extension=".webp",
+                    save_kwargs={"quality": 80, "method": 6},
+                )
+
+            self.assertEqual(result, [])
 
 
 if __name__ == "__main__":

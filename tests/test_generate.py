@@ -45,8 +45,15 @@ class GenerateMainTests(unittest.TestCase):
 
         paths = BuildPaths.from_root(root)
         for field in (
-            "root", "posts_dir", "static_dir", "dist_dir", "templates_dir",
-            "config_path", "theme_path", "robots_path", "favicon_path",
+            "root",
+            "posts_dir",
+            "static_dir",
+            "dist_dir",
+            "templates_dir",
+            "config_path",
+            "theme_path",
+            "robots_path",
+            "favicon_path",
         ):
             setattr(mock_paths, field, getattr(paths, field))
 
@@ -85,10 +92,14 @@ class GenerateMainTests(unittest.TestCase):
             root = self._create_minimal_site(tmp)
             self._apply_paths(mock_paths, root)
 
-            result = main([
-                "--config", str(root / "config.toml"),
-                "--site-url", "http://example.com",
-            ])
+            result = main(
+                [
+                    "--config",
+                    str(root / "config.toml"),
+                    "--site-url",
+                    "http://example.com",
+                ]
+            )
             self.assertEqual(result, 0)
 
 
