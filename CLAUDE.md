@@ -34,6 +34,9 @@ uv run python -m unittest tests/test_content.py
 
 # Run a single test case
 uv run python -m unittest tests.test_content.TestFrontMatter.test_parse_toml
+
+# Regenerate golden snapshot files after intentional HTML changes
+UPDATE_SNAPSHOTS=1 uv run python -m unittest tests/test_snapshots.py
 ```
 
 ## Architecture
@@ -49,7 +52,7 @@ feeds.py    → generate feed.xml (Atom) and rss.xml
 seo.py      → generate sitemap.xml and robots.txt
 assets.py   → copy blog/static/ → blog/dist/static/
 urls.py     → shared helpers for canonical URL composition
-models.py   → shared dataclasses (Post, ImageVariant, etc.)
+models.py   → shared dataclasses (Post, ImageMeta, SiteConfig, BuildPaths, etc.)
 ```
 
 **Key architectural facts:**
@@ -60,9 +63,8 @@ models.py   → shared dataclasses (Post, ImageVariant, etc.)
 
 **View transitions & slideshow patterns (`blog/theme.css`, `blog/templates/post.html`):**
 - Cross-document view transitions enabled via `@view-transition { navigation: auto }` (CSS only)
-- `.slideshow-track` has a CSS initial `transform: translateX(calc(...))` — **do not remove it**. It pre-centers slide 0 so the view-transition "new" snapshot is already correct before `snapCenter()` JS runs. Three breakpoint formulas cover desktop/mid/small viewports; all must match `snapCenter()`'s runtime output exactly or a visible jump will appear at crossfade end.
-- Inactive slides use `opacity: 0.55; transform: scale(0.97)` to visually focus the active slide; these are CSS class-based (`.is-active`) and animated with the same easing as the track transition.
-- `snapCenter()` (inline JS in `post.html`) uses `transition: none` → `centerSlide()` → force reflow → restore transition to reposition without animation. This pattern must be preserved for resize/load events.
+- `.slideshow-track` CSS initial `transform: translateX(calc(...))` — **do not remove it**. It pre-centers slide 0 so the view-transition snapshot is correct before JS runs; removing it causes a visible jump on crossfade.
+- `snapCenter()` (inline JS in `post.html`) uses `transition: none` → `centerSlide()` → force reflow → restore transition. This pattern must be preserved for resize/load events; breakpoint formulas must exactly match the CSS initial transforms.
 
 ## Content Format
 
