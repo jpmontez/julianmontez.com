@@ -1,0 +1,143 @@
+---
+import { getCollection, render } from 'astro:content';
+import { getImage } from 'astro:assets';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostImage from '../components/PostImage.astro';
+import Slideshow from '../components/Slideshow.astro';
+import { siteConfig } from '../config';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map((post) => {
+    const date = post.data.date;
+    const year = String(date.getUTCFullYear());
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    // Derive slug from filePath to preserve original case (glob loader lowercases post.id)
+    const fileName = post.filePath
+      ? post.filePath.split('/').pop()!.replace(/\.md$/, '')
+      : post.id;
+    return {
+      params: { slug: `${year}/${month}/${fileName}` },
+      props: { post },
+    };
+  });
+}
+
+const { post } = Astro.props;
+const { date, title, images, excerpt, layout, location } = post.data;
+
+// Render markdown body (only if post has content beyond frontmatter)
+const { Content } = await render(post);
+const hasBody = post.body && post.body.trim().length > 0;
+
+// Format display date: "21 Feb 2026"
+const displayDate = date.toLocaleDateString('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+// ISO date for datetime attribute and JSON-LD
+const isoDate = date.toISOString().split('T')[0];
+
+// Page metadata
+const pageTitle = `${title || displayDate} — ${siteConfig.title}`;
+const pageDescription = excerpt || title || siteConfig.description;
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
+
+// OG image: use first image if available
+let ogImageUrl: string | undefined;
+if (images.length > 0) {
+  const ogImage = await getImage({ src: images[0].src, width: 1080, format: 'jpg' });
+  ogImageUrl = new URL(ogImage.src, Astro.site).href;
+}
+
+// Location parsing
+let locationName: string | undefined;
+let locationLat: number | undefined;
+let locationLon: number | undefined;
+
+if (typeof location === 'string') {
+  locationName = location;
+} else if (location) {
+  locationName = location.name;
+  locationLat = location.lat;
+  locationLon = location.lon;
+}
+
+const hasLocation = locationName || (locationLat != null && locationLon != null);
+
+// JSON-LD headline
+const headline = title || displayDate;
+---
+
+<BaseLayout
+  pageTitle={pageTitle}
+  pageDescription={pageDescription}
+  canonicalUrl={canonicalUrl}
+  ogType="article"
+  ogImageUrl={ogImageUrl}
+>
+  <script
+    is:inline
+    slot="head"
+    type="application/ld+json"
+    set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline,
+      datePublished: isoDate,
+      author: { '@type': 'Person', name: siteConfig.author },
+      description: pageDescription,
+      mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+    })}
+  />
+
+  <article class={`post ${layout}`}>
+    {images.length > 1 ? (
+      <Slideshow images={images} />
+    ) : images.length === 1 ? (
+      <PostImage image={images[0].src} alt={images[0].alt} isEager isLcp />
+    ) : null}
+
+    {excerpt && (
+      <div class="excerpt">
+        <p>{excerpt}</p>
+      </div>
+    )}
+
+    {hasBody && (
+      <div class="body">
+        <Content />
+      </div>
+    )}
+
+    {hasLocation && (
+      <p class="location">
+        {locationName && <span class="location-name">{locationName}</span>}
+        {locationName && locationLat != null && locationLon != null && (
+          <span aria-hidden="true"> &middot; </span>
+        )}
+        {locationLat != null && locationLon != null && (
+          <a
+            href={`https://maps.google.com/?q=${locationLat},${locationLon}`}
+            class="location-coords"
+            aria-label="View on Google Maps"
+            rel="noopener"
+          >
+            {locationLat.toFixed(5)}, {locationLon.toFixed(5)}
+          </a>
+        )}
+      </p>
+    )}
+
+    <p class="meta">
+      <time datetime={isoDate}>{displayDate}</time>
+    </p>
+  </article>
+
+  <nav class="feed-nav" aria-label="Post navigation">
+    <a href="/">Back to feed</a>
+  </nav>
+</BaseLayout>

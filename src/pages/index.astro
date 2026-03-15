@@ -1,0 +1,121 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostImage from '../components/PostImage.astro';
+import { siteConfig } from '../config';
+
+const allPosts = await getCollection('posts');
+allPosts.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+const totalPages = Math.ceil(allPosts.length / siteConfig.postsPerPage);
+const posts = allPosts.slice(0, siteConfig.postsPerPage);
+
+// Pre-render body content for posts that have it
+const rendered = await Promise.all(
+  posts.map(async (post) => {
+    const hasBody = post.body && post.body.trim().length > 0;
+    if (hasBody) {
+      const { Content } = await render(post);
+      return { post, Content };
+    }
+    return { post, Content: null };
+  })
+);
+
+function getPostUrl(post: (typeof posts)[0]): string {
+  const date = post.data.date;
+  const year = String(date.getUTCFullYear());
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const fileName = post.filePath
+    ? post.filePath.split('/').pop()!.replace(/\.md$/, '')
+    : post.id;
+  return `/${year}/${month}/${fileName}/`;
+}
+
+function formatDate(date: Date): { display: string; iso: string } {
+  const display = date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  const iso = date.toISOString().split('T')[0];
+  return { display, iso };
+}
+
+function getLocationInfo(location: typeof posts[0]['data']['location']) {
+  if (typeof location === 'string') {
+    return { name: location, lat: undefined, lon: undefined };
+  } else if (location) {
+    return { name: location.name, lat: location.lat, lon: location.lon };
+  }
+  return { name: undefined, lat: undefined, lon: undefined };
+}
+---
+
+<BaseLayout pageTitle={siteConfig.title}>
+  {rendered.map(({ post, Content }, index) => {
+    const postUrl = getPostUrl(post);
+    const { display, iso } = formatDate(post.data.date);
+    const { name: locationName, lat, lon } = getLocationInfo(post.data.location);
+    const hasLocation = locationName || (lat != null && lon != null);
+    const isEager = index < siteConfig.eagerImages;
+    const isLcp = index === 0;
+
+    return (
+      <article class={`post ${post.data.layout}`}>
+        {post.data.images.length > 0 && (
+          <PostImage
+            image={post.data.images[0].src}
+            alt={post.data.images[0].alt}
+            linkHref={postUrl}
+            isEager={isEager}
+            isLcp={isLcp}
+          />
+        )}
+
+        {post.data.excerpt ? (
+          <div class="excerpt">
+            <p>{post.data.excerpt}</p>
+          </div>
+        ) : Content ? (
+          <div class="body">
+            <Content />
+          </div>
+        ) : null}
+
+        {hasLocation && (
+          <p class="location">
+            {locationName && <span class="location-name">{locationName}</span>}
+            {locationName && lat != null && lon != null && (
+              <span aria-hidden="true"> &middot; </span>
+            )}
+            {lat != null && lon != null && (
+              <a
+                href={`https://maps.google.com/?q=${lat},${lon}`}
+                class="location-coords"
+                aria-label="View on Google Maps"
+                rel="noopener"
+              >
+                {lat.toFixed(5)}, {lon.toFixed(5)}
+              </a>
+            )}
+          </p>
+        )}
+
+        <div class="meta">
+          <a href={postUrl}>
+            <time datetime={iso}>{display}</time>
+          </a>
+        </div>
+      </article>
+    );
+  })}
+
+  {totalPages > 1 && (
+    <nav class="feed-nav">
+      <a href="/page/2/">Older</a>
+      <div class="meta">Page 1 of {totalPages}</div>
+    </nav>
+  )}
+</BaseLayout>

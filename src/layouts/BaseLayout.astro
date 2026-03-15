@@ -1,0 +1,104 @@
+---
+import '../styles/theme.css';
+import { siteConfig } from '../config';
+
+interface PreloadImage {
+  src: string;
+  srcset?: string;
+  avifSrcset?: string;
+  sizes?: string;
+}
+
+interface Props {
+  pageTitle: string;
+  pageDescription?: string;
+  canonicalUrl?: string;
+  ogType?: string;
+  ogImageUrl?: string;
+  preloadImage?: PreloadImage;
+  faviconUrl?: string;
+}
+
+const {
+  pageTitle,
+  pageDescription = siteConfig.description,
+  canonicalUrl = Astro.url.href,
+  ogType = 'website',
+  ogImageUrl,
+  preloadImage,
+  faviconUrl = '/favicon.png',
+} = Astro.props;
+
+const currentYear = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:site_name" content={siteConfig.title} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:type" content={ogType} />
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    <meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+    <link
+      rel="alternate"
+      type="application/atom+xml"
+      title={siteConfig.title}
+      href="/feed.xml"
+    />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={siteConfig.title}
+      href="/rss.xml"
+    />
+    <link rel="icon" type="image/png" href={faviconUrl} />
+    {preloadImage?.avifSrcset && (
+      <link
+        rel="preload"
+        as="image"
+        type="image/avif"
+        href={preloadImage.src}
+        fetchpriority="high"
+        imagesrcset={preloadImage.avifSrcset}
+        imagesizes={preloadImage.sizes || siteConfig.imageSizes}
+      />
+    )}
+    {preloadImage && (
+      <link
+        rel="preload"
+        as="image"
+        href={preloadImage.src}
+        fetchpriority="high"
+        imagesrcset={preloadImage.srcset}
+        imagesizes={preloadImage.sizes || siteConfig.imageSizes}
+      />
+    )}
+    <slot name="head" />
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="page">
+      <header class="site">
+        <span class="title"><a href="/">{siteConfig.title}</a></span>
+        <span class="tagline">{siteConfig.tagline}</span>
+      </header>
+      <main id="main">
+        <slot />
+      </main>
+      <footer class="footer">
+        &copy; {currentYear}
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,171 @@
+---
+import type { ImageMetadata } from 'astro';
+import PostImage from './PostImage.astro';
+
+interface SlideImage {
+  src: ImageMetadata;
+  alt: string;
+}
+
+interface Props {
+  images: SlideImage[];
+  eagerCount?: number;
+  lcpIndex?: number;
+}
+
+const { images, eagerCount = 2, lcpIndex = 0 } = Astro.props;
+---
+
+<section class="slideshow" aria-label="Post image slideshow" data-slideshow>
+  <div class="slideshow-viewport">
+    <div class="slideshow-track">
+      {images.map((image, i) => (
+        <div class:list={['slide', { 'is-active': i === 0 }]} data-slide>
+          <PostImage
+            image={image.src}
+            alt={image.alt}
+            isEager={i < eagerCount}
+            isLcp={i === lcpIndex}
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+  <div class="slideshow-nav" aria-label="Slideshow navigation">
+    <button class="slideshow-control prev" type="button" aria-label="Previous photo">&#8249;</button>
+    <span class="slideshow-counter" aria-live="polite">1 / {images.length}</span>
+    <button class="slideshow-control next" type="button" aria-label="Next photo">&#8250;</button>
+  </div>
+</section>
+
+<script is:inline>
+(function () {
+  var slideshows = document.querySelectorAll("[data-slideshow]");
+  if (!slideshows.length) {
+    return;
+  }
+  var slideshowStates = [];
+  var activeState = null;
+  var isTypingTarget = function (target) {
+    if (!target || !target.tagName) {
+      return false;
+    }
+    if (target.isContentEditable) {
+      return true;
+    }
+    var tag = target.tagName.toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  };
+  slideshows.forEach(function (slideshow) {
+    var viewport = slideshow.querySelector(".slideshow-viewport");
+    var track = slideshow.querySelector(".slideshow-track");
+    var slides = Array.prototype.slice.call(slideshow.querySelectorAll("[data-slide]"));
+    if (slides.length <= 1) {
+      return;
+    }
+    var prev = slideshow.querySelector(".slideshow-control.prev");
+    var next = slideshow.querySelector(".slideshow-control.next");
+    var state = { index: slides.findIndex(function (slide) {
+      return slide.classList.contains("is-active");
+    }) };
+    if (state.index < 0) {
+      state.index = 0;
+      slides[0].classList.add("is-active");
+    }
+    var centerSlide = function () {
+      if (!viewport || !track) {
+        return;
+      }
+      var slide = slides[state.index];
+      var slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
+      var viewportCenter = viewport.clientWidth / 2;
+      var translate = viewportCenter - slideCenter;
+      track.style.transform = "translateX(" + translate + "px)";
+    };
+    var snapCenter = function () {
+      track.style.transition = 'none';
+      centerSlide();
+      track.offsetHeight; /* force reflow */
+      track.style.transition = '';
+    };
+    var counter = slideshow.querySelector(".slideshow-counter");
+    var setActive = function (nextIndex) {
+      slides[state.index].classList.remove("is-active");
+      state.index = (nextIndex + slides.length) % slides.length;
+      slides[state.index].classList.add("is-active");
+      if (counter) {
+        counter.textContent = (state.index + 1) + " / " + slides.length;
+      }
+      centerSlide();
+    };
+    state.setActive = setActive;
+    slideshowStates.push(state);
+    if (!activeState) {
+      activeState = state;
+    }
+    var activateState = function () {
+      activeState = state;
+    };
+    slideshow.addEventListener("pointerdown", activateState);
+    slideshow.addEventListener("focusin", activateState);
+    if (prev) {
+      prev.addEventListener("click", function () {
+        activateState();
+        setActive(state.index - 1);
+      });
+    }
+    if (next) {
+      next.addEventListener("click", function () {
+        activateState();
+        setActive(state.index + 1);
+      });
+    }
+    slides.forEach(function (slide, slideIndex) {
+      slide.addEventListener("click", function () {
+        activateState();
+        setActive(slideIndex);
+      });
+    });
+    slides.forEach(function (slide) {
+      var img = slide.querySelector("img");
+      if (img && !img.complete) {
+        img.addEventListener("load", snapCenter);
+      }
+    });
+    window.addEventListener("resize", snapCenter);
+    var touchStartX = 0;
+    var touchStartY = 0;
+    slideshow.addEventListener("touchstart", function (e) {
+      touchStartX = e.changedTouches[0].clientX;
+      touchStartY = e.changedTouches[0].clientY;
+    }, { passive: true });
+    slideshow.addEventListener("touchend", function (e) {
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      var dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) {
+        return;
+      }
+      activateState();
+      setActive(state.index + (dx < 0 ? 1 : -1));
+    });
+    snapCenter();
+  });
+  window.addEventListener("keydown", function (event) {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+    if (isTypingTarget(event.target)) {
+      return;
+    }
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+    var state = activeState || slideshowStates[0];
+    if (!state || !state.setActive) {
+      return;
+    }
+    event.preventDefault();
+    state.setActive(state.index + (event.key === "ArrowRight" ? 1 : -1));
+  });
+})();
+</script>

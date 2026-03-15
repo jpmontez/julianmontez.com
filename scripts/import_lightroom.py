@@ -16,8 +16,8 @@ from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DESKTOP = Path.home() / "Desktop"
-STATIC_DIR = ROOT / "blog" / "static"
-POSTS_DIR = ROOT / "blog" / "posts"
+STATIC_DIR = ROOT / "src" / "assets" / "photos"
+POSTS_DIR = ROOT / "src" / "content" / "posts"
 LOGGER = logging.getLogger("import_lightroom")
 
 # Lightroom export format: YYYMMDD-DSC_NNNN.jpg (per the request; assume 8-digit date)
@@ -96,10 +96,8 @@ def prompt_slug(date: dt.date, default_slug: str) -> str:
 
 
 def ensure_post_path(date: dt.date, slug: str) -> Path:
-    year_dir = POSTS_DIR / f"{date.year:04d}"
-    month_dir = year_dir / f"{date.month:02d}"
-    month_dir.mkdir(parents=True, exist_ok=True)
-    return month_dir / f"{slug}.md"
+    POSTS_DIR.mkdir(parents=True, exist_ok=True)
+    return POSTS_DIR / f"{slug}.md"
 
 
 def choose_slug(date: dt.date, photos: list[Photo]) -> tuple[str, Path]:
@@ -118,15 +116,14 @@ def choose_slug(date: dt.date, photos: list[Photo]) -> tuple[str, Path]:
 
 
 def write_post(post_path: Path, date: dt.date, photos: list[Photo]) -> None:
-    images_lines = [f'  {{ src = "static/{p.destination.name}" }},' for p in photos]
+    images_lines = [f'  - src: "../../assets/photos/{p.destination.name}"' for p in photos]
     content_lines = [
-        "++++",
-        f"date = {date:%Y-%m-%d}",
-        "images = [",
+        "---",
+        f"date: {date:%Y-%m-%d}",
+        "images:",
         *images_lines,
-        "]",
-        'layout = "photo"',
-        "++++",
+        'layout: "photo"',
+        "---",
         "",
     ]
     post_path.write_text("\n".join(content_lines), encoding="utf-8")
@@ -163,7 +160,7 @@ def main() -> int:
     parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Overwrite existing files in blog/static without prompting.",
+        help="Overwrite existing files in src/assets/photos without prompting.",
     )
     parser.add_argument(
         "--log-level",

@@ -1,106 +1,74 @@
-# julianmontez.com microblog
+# julianmontez.com
 
-Static Tumblr-style photoblog generator built with Python and uv. The site is generated into `blog/dist` and deployed as static files.
+Static photoblog built with [Astro](https://astro.build). Deployed to Cloudflare Pages.
 
 ## Quick Start
-1. Install dependencies:
-   `uv sync`
-2. Build the site:
-   `uv run generate-blog`
-3. Run checks:
-   `make test` and `uv run ruff check`
-4. Preview locally:
-   `make preview` (serves `blog/dist` on `http://localhost:8080` by default)
 
-## Make Targets
-- `make install`: `uv sync`
-- `make build`: install + generate site
-- `make preview`: generate with preview URL overrides and serve with `uv run python -m http.server`
-- `make test`: run unit tests
-- `make format`: run Ruff formatter
-- `make lint`: run Ruff lint checks
-- `make check`: format + lint
-- `make import [LIGHTROOM_EXPORT_DIR=...]`: import Lightroom JPG exports
-- `make clean`: remove `blog/dist`
-- `make distclean`: remove `blog/dist`, `.uv`, `.venv`
-- `make regen`: clean + build
-
-## Repository Layout
-- `blog/generate.py`: CLI entrypoint (`generate-blog`)
-- `blog/config.py`: config loading/validation + CLI overrides
-- `blog/content.py`: post/front matter parsing
-- `blog/images.py`: image metadata + responsive variant generation
-- `blog/render.py`: template rendering + pagination build
-- `blog/feeds.py`: Atom/RSS generation
-- `blog/seo.py`: sitemap + robots rewrite
-- `blog/urls.py`: URL composition helpers
-- `blog/assets.py`: dist setup + static asset copy
-- `blog/templates/`: Jinja templates
-- `blog/static/`: source static assets
-- `blog/posts/YYYY/MM/*.md`: content files
-- `tests/`: unit tests
-
-## Writing Posts
-Create Markdown files under `blog/posts/YYYY/MM/`, for example `blog/posts/2024/10/2024-10-12-my-post.md`:
-
-```markdown
-+++
-title = "Optional metadata title"
-date = 2024-10-12
-images = [
-  { src = "static/2024-10-12-photo.jpg", alt = "Describe the photo." },
-]
-excerpt = "Optional excerpt."
-location = { name = "Prospect Park, Brooklyn, NY", lat = 40.66020, lon = -73.96900 }
-layout = "photo"
-+++
-
-Markdown body content.
+```bash
+npm install
+npx astro dev        # dev server at http://localhost:4321
+npx astro build      # build to dist/
+npx astro check      # type-check
 ```
 
-Notes:
-- Front matter delimiter must be `+++` or `++++` with matching start/end.
-- Dates must be ISO `YYYY-MM-DD`.
-- `location` is optional; supports either a string name or a table with `name` + `lat`/`lon`.
-- Post titles are intentionally hidden in rendered page content; they are still used for metadata/feed context.
+## Repository Layout
 
-## Configuration
-`blog/config.toml` supports:
-- `title`, `tagline`, `description`, `author`
-- `site_url`: canonical public origin for absolute URLs
-- `base_url`: optional subpath prefix
-- `eager_images`: count of above-the-fold eager-loaded images
-- `posts_per_page`: feed pagination size
-- `responsive_widths`: generated raster widths
-- `image_sizes`: responsive `sizes` attribute value
-- `feed_max_posts`: max Atom/RSS items (`0` disables entries)
-- `feed_self_url`: optional feed self-link base override
-- `emit_style_file`: emit `dist/style.css` in addition to inline CSS
+```
+src/
+  assets/photos/       # full-resolution source images
+  content/posts/       # Markdown posts (YAML front matter)
+  components/
+    PostImage.astro    # responsive <picture> with AVIF/WebP srcset
+    Slideshow.astro    # multi-image horizontal slideshow
+  layouts/
+    BaseLayout.astro   # base HTML layout
+  pages/
+    index.astro        # paginated feed (page 1)
+    page/[page].astro  # paginated feed (pages 2+)
+    [...slug].astro    # post detail pages
+    feed.xml.ts        # Atom feed
+    rss.xml.ts         # RSS feed
+  styles/
+    theme.css          # global stylesheet
+  config.ts            # site config
+scripts/
+  import_lightroom.py  # import Lightroom JPG exports
+```
+
+## Writing Posts
+
+Create a Markdown file in `src/content/posts/`, for example `2024-10-12-my-post.md`:
+
+```markdown
+---
+date: 2024-10-12
+images:
+  - src: ../../assets/photos/2024-10-12-photo.jpg
+    alt: "Describe the photo."
+excerpt: "Optional excerpt."
+location:
+  name: "Prospect Park, Brooklyn, NY"
+  lat: 40.66020
+  lon: -73.96900
+---
+
+Optional markdown body.
+```
+
+Place the source image in `src/assets/photos/`. Astro generates responsive variants (480/720/1080px in AVIF, WebP, and JPEG) at build time.
 
 ## Lightroom Import
-`scripts/import_lightroom.py` imports files matching `YYYYMMDD-DSC_NNNN.jpg`:
-- Copies photos into `blog/static/` as `YYYY-MM-DD-DSC_NNNN.jpg`
-- Scaffolds post files in `blog/posts/YYYY/MM/`
-- Prompts for slug on same-day multi-image imports
-- Prompts before overwrite unless `--overwrite` is passed
 
-## Generated Output
-`blog/dist/` includes:
-- `index.html`
-- `page/N/` pagination
-- `YYYY/MM/slug/` post pages
-- `static/` assets
-  - Source images plus responsive variants and modern transcodes (`.webp` / `.avif`) for `<picture>` delivery
-- `feed.xml` (Atom) and `rss.xml`
-- `sitemap.xml`
-- `robots.txt`
+```bash
+python scripts/import_lightroom.py [LIGHTROOM_EXPORT_DIR]
+```
+
+Imports files matching `YYYYMMDD-DSC_NNNN.jpg`, copies them to `src/assets/photos/`, and scaffolds post files in `src/content/posts/`.
 
 ## CI/CD
-GitHub Actions workflow `.github/workflows/deploy.yml`:
-- `validate` job: install, test, lint, build
-- `deploy` job: runs only on non-PR events and deploys `blog/dist` to Cloudflare Pages
 
-Required secrets:
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_PROJECT_NAME`
+GitHub Actions (`.github/workflows/deploy.yml`):
+- `validate`: install, type-check, build
+- `deploy`: deploys `dist/` to Cloudflare Pages on non-PR pushes
+
+Required secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`
