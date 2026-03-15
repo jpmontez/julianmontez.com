@@ -1,0 +1,120 @@
+---
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+import { siteConfig } from '../config';
+
+interface Props {
+  image: ImageMetadata;
+  alt: string;
+  isEager?: boolean;
+  isLcp?: boolean;
+  linkHref?: string;
+}
+
+const { image, alt, isEager = false, isLcp = false, linkHref } = Astro.props;
+
+const RESPONSIVE_WIDTHS = [480, 720, 1080];
+const AVIF_QUALITY = 40;
+const WEBP_QUALITY = 80;
+const JPEG_QUALITY = 85;
+
+const sourceWidth = image.width;
+const sourceHeight = image.height;
+const aspectRatio = sourceHeight / sourceWidth;
+
+// For native format, only generate widths smaller than original
+const nativeWidths = RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth);
+
+// For transcoded formats, include widths smaller than original + the original width itself
+const transcodedWidths = [
+  ...RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth),
+  sourceWidth,
+];
+
+// Determine native format from source
+const nativeFormat = image.format === 'png' ? 'png' : 'jpg';
+
+// Generate all variants in parallel
+const [avifVariants, webpVariants, nativeVariants] = await Promise.all([
+  Promise.all(
+    transcodedWidths.map((w) =>
+      getImage({ src: image, width: w, format: 'avif', quality: AVIF_QUALITY })
+    )
+  ),
+  Promise.all(
+    transcodedWidths.map((w) =>
+      getImage({ src: image, width: w, format: 'webp', quality: WEBP_QUALITY })
+    )
+  ),
+  Promise.all(
+    nativeWidths.map((w) =>
+      getImage({
+        src: image,
+        width: w,
+        format: nativeFormat,
+        quality: JPEG_QUALITY,
+      })
+    )
+  ),
+]);
+
+// Build srcset strings
+function buildSrcset(variants: Awaited<ReturnType<typeof getImage>>[]) {
+  return variants
+    .map((v) => `${v.src} ${v.attributes.width}w`)
+    .join(', ');
+}
+
+const avifSrcset = buildSrcset(avifVariants);
+const webpSrcset = buildSrcset(webpVariants);
+const nativeSrcset = buildSrcset(nativeVariants);
+
+// Use the largest native variant as the fallback src
+const fallback = nativeVariants.length > 0
+  ? nativeVariants[nativeVariants.length - 1]
+  : await getImage({ src: image, format: nativeFormat, quality: JPEG_QUALITY });
+
+const fallbackWidth = fallback.attributes.width;
+const fallbackHeight = Math.round(Number(fallbackWidth) * aspectRatio);
+
+const sizes = siteConfig.imageSizes;
+const loading = isEager ? 'eager' : 'lazy';
+---
+
+<figure>
+  {linkHref ? (
+    <a class="post-image-link" href={linkHref}>
+      <picture>
+        <source type="image/avif" srcset={avifSrcset} sizes={sizes} />
+        <source type="image/webp" srcset={webpSrcset} sizes={sizes} />
+        <img
+          src={fallback.src}
+          alt={alt}
+          srcset={nativeSrcset}
+          sizes={sizes}
+          width={fallbackWidth}
+          height={fallbackHeight}
+          loading={loading}
+          fetchpriority={isLcp ? 'high' : undefined}
+          decoding="async"
+        />
+      </picture>
+    </a>
+  ) : (
+    <picture>
+      <source type="image/avif" srcset={avifSrcset} sizes={sizes} />
+      <source type="image/webp" srcset={webpSrcset} sizes={sizes} />
+      <img
+        src={fallback.src}
+        alt={alt}
+        srcset={nativeSrcset}
+        sizes={sizes}
+        width={fallbackWidth}
+        height={fallbackHeight}
+        loading={loading}
+        fetchpriority={isLcp ? 'high' : undefined}
+        decoding="async"
+      />
+    </picture>
+  )}
+</figure>
