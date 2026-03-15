@@ -1,18 +1,36 @@
 ---
 import { getCollection, render } from 'astro:content';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import PostImage from '../components/PostImage.astro';
-import { siteConfig } from '../config';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostImage from '../../components/PostImage.astro';
+import { siteConfig } from '../../config';
 
-const allPosts = await getCollection('posts');
-allPosts.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+export async function getStaticPaths() {
+  const allPosts = await getCollection('posts');
+  allPosts.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 
-const totalPages = Math.ceil(allPosts.length / siteConfig.postsPerPage);
-const posts = allPosts.slice(0, siteConfig.postsPerPage);
+  const totalPages = Math.ceil(allPosts.length / siteConfig.postsPerPage);
+
+  // Generate pages 2..N (page 1 is index.astro)
+  return Array.from({ length: totalPages - 1 }, (_, i) => {
+    const pageNum = i + 2;
+    const start = (pageNum - 1) * siteConfig.postsPerPage;
+    const end = start + siteConfig.postsPerPage;
+    return {
+      params: { page: String(pageNum) },
+      props: {
+        posts: allPosts.slice(start, end),
+        pageNum,
+        totalPages,
+      },
+    };
+  });
+}
+
+const { posts, pageNum, totalPages } = Astro.props;
 
 // Pre-render body content for posts that have it
 const rendered = await Promise.all(
-  posts.map(async (post) => {
+  posts.map(async (post: any) => {
     const hasBody = post.body && post.body.trim().length > 0;
     if (hasBody) {
       const { Content } = await render(post);
@@ -22,7 +40,7 @@ const rendered = await Promise.all(
   })
 );
 
-function getPostUrl(post: (typeof posts)[0]): string {
+function getPostUrl(post: any): string {
   const date = post.data.date;
   const year = String(date.getUTCFullYear());
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -43,7 +61,7 @@ function formatDate(date: Date): { display: string; iso: string } {
   return { display, iso };
 }
 
-function getLocationInfo(location: typeof posts[0]['data']['location']) {
+function getLocationInfo(location: any) {
   if (typeof location === 'string') {
     return { name: location, lat: undefined, lon: undefined };
   } else if (location) {
@@ -51,16 +69,17 @@ function getLocationInfo(location: typeof posts[0]['data']['location']) {
   }
   return { name: undefined, lat: undefined, lon: undefined };
 }
+
+const newerHref = pageNum === 2 ? '/' : `/page/${pageNum - 1}/`;
+const hasOlder = pageNum < totalPages;
 ---
 
-<BaseLayout pageTitle={siteConfig.title}>
-  {rendered.map(({ post, Content }, index) => {
+<BaseLayout pageTitle={`Page ${pageNum} — ${siteConfig.title}`}>
+  {rendered.map(({ post, Content }: any) => {
     const postUrl = getPostUrl(post);
     const { display, iso } = formatDate(post.data.date);
     const { name: locationName, lat, lon } = getLocationInfo(post.data.location);
     const hasLocation = locationName || (lat != null && lon != null);
-    const isEager = index < siteConfig.eagerImages;
-    const isLcp = index === 0;
 
     return (
       <article class={`post ${post.data.layout}`}>
@@ -69,8 +88,6 @@ function getLocationInfo(location: typeof posts[0]['data']['location']) {
             image={post.data.images[0].src}
             alt={post.data.images[0].alt}
             linkHref={postUrl}
-            isEager={isEager}
-            isLcp={isLcp}
           />
         )}
 
@@ -112,10 +129,14 @@ function getLocationInfo(location: typeof posts[0]['data']['location']) {
     );
   })}
 
-  {totalPages > 1 && (
-    <nav class="feed-nav">
-      <a href="/page/2/">Older</a>
-      <div class="meta">Page 1 of {totalPages}</div>
-    </nav>
-  )}
+  <nav class="feed-nav">
+    <a href={newerHref}>Newer</a>
+    {hasOlder && (
+      <>
+        <span> &bull; </span>
+        <a href={`/page/${pageNum + 1}/`}>Older</a>
+      </>
+    )}
+    <div class="meta">Page {pageNum} of {totalPages}</div>
+  </nav>
 </BaseLayout>
