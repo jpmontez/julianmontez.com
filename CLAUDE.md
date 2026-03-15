@@ -6,10 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Before starting any task, read these files in order (they are the single source of truth):
 1. `README.md` — project overview, setup, make targets, content format
-2. `HANDOFF.md` — current state, open challenges, next steps, data conventions
 3. `TODO.md` — active task queue
 
-After completing work: update `HANDOFF.md` (what you did and what's next) and `TODO.md` (mark done, add new). Only update `README.md` if user-facing setup or commands changed.
+After completing work: update `TODO.md` (mark done, add new). Only update `README.md` if user-facing setup or commands changed.
 
 ## Commands
 
