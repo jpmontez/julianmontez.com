@@ -32,9 +32,18 @@
       <link
         rel="preload"
         as="image"
-        href="../../../static/photo-1.jpg"
+        type="image/avif"
+        href="../../../static/photo-0-1200w.avif"
         fetchpriority="high"
-        imagesrcset="../../../static/photo-1-480w.jpg 480w, ../../../static/photo-1.jpg 1200w"
+        imagesrcset="../../../static/photo-0-480w.avif 480w, ../../../static/photo-0-1200w.avif 1200w"
+        imagesizes="(max-width: 720px) 100vw, 520px"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href="../../../static/photo-0.jpg"
+        fetchpriority="high"
+        imagesrcset="../../../static/photo-0-480w.jpg 480w, ../../../static/photo-0.jpg 1200w"
         imagesizes="(max-width: 720px) 100vw, 520px"
       />
     <style>body{}</style>
@@ -79,6 +88,7 @@
           src="../../../static/photo-0.jpg"
           alt="Alt text 0"
           loading="eager"
+          fetchpriority="high"
           srcset="../../../static/photo-0-480w.jpg 480w, ../../../static/photo-0.jpg 1200w"
           sizes="(max-width: 720px) 100vw, 520px"
           decoding="async"
@@ -101,7 +111,6 @@ width="1200" height="800"        />
           src="../../../static/photo-1.jpg"
           alt="Alt text 1"
           loading="eager"
-          fetchpriority="high"
           srcset="../../../static/photo-1-480w.jpg 480w, ../../../static/photo-1.jpg 1200w"
           sizes="(max-width: 720px) 100vw, 520px"
           decoding="async"

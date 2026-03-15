@@ -221,7 +221,7 @@ def attach_image_meta(
                             dist_root=dist_dir,
                             output_format="AVIF",
                             output_extension=".avif",
-                            save_kwargs={"quality": 55},
+                            save_kwargs={"quality": 40},
                         ),
                     )
 
@@ -258,18 +258,13 @@ def image_src(meta: ImageMeta) -> str:
     return meta.primary_src or meta.path
 
 
-def image_lcp_score(meta: ImageMeta) -> float:
-    if meta.width and meta.height and meta.width > 0:
-        return meta.height / meta.width
-    return 0.0
-
-
 def select_lcp_meta(candidates: list[ImageMeta]) -> ImageMeta | None:
     if not candidates:
         return None
-    # If candidates are equally sized in the viewport, the later element can
-    # become the LCP candidate, so break ties by picking the last one.
-    return max(enumerate(candidates), key=lambda item: (image_lcp_score(item[1]), item[0]))[1]
+    # The first image in DOM order is the actual LCP element — it's the first
+    # visible content the browser paints. Portrait-ratio ranking was a bad
+    # heuristic that mis-predicted the LCP for multi-image slideshows.
+    return candidates[0]
 
 
 def select_above_fold_metas(metas: Iterable[ImageMeta], count: int) -> list[ImageMeta]:

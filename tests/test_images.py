@@ -6,8 +6,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from blog.images import attach_image_meta
-from blog.models import Post
+from blog.images import attach_image_meta, select_lcp_meta
+from blog.models import ImageMeta, Post
 
 
 class ImageTests(unittest.TestCase):
@@ -238,6 +238,22 @@ class ImageTests(unittest.TestCase):
                 )
 
             self.assertEqual(result, [])
+
+
+class SelectLcpMetaTests(unittest.TestCase):
+    def test_returns_first_candidate_not_most_portrait(self) -> None:
+        """select_lcp_meta returns the first image in DOM order, not the most portrait."""
+        first = ImageMeta(path="first.jpg", width=1600, height=400)  # wide → low portrait ratio
+        second = ImageMeta(path="second.jpg", width=400, height=1600)  # tall → high portrait ratio
+        result = select_lcp_meta([first, second])
+        self.assertEqual(result.path, "first.jpg")
+
+    def test_returns_only_candidate(self) -> None:
+        meta = ImageMeta(path="only.jpg", width=800, height=600)
+        self.assertEqual(select_lcp_meta([meta]), meta)
+
+    def test_returns_none_for_empty(self) -> None:
+        self.assertIsNone(select_lcp_meta([]))
 
 
 if __name__ == "__main__":

@@ -125,6 +125,7 @@ class Pagination:
 class PreloadImage:
     src: str
     srcset: list[tuple[str, int]]
+    avif_srcset: list[tuple[str, int]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

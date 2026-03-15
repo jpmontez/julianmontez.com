@@ -34,6 +34,17 @@
     />
     <link rel="icon" type="image/png" href="{{ assets_prefix }}/favicon.png{% if site.favicon_hash %}?v={{ site.favicon_hash }}{% endif %}" />
     {% if preload_image %}
+      {% if preload_image.avif_srcset %}
+      <link
+        rel="preload"
+        as="image"
+        type="image/avif"
+        href="{{ assets_prefix }}/{{ preload_image.avif_srcset[-1][0] }}"
+        fetchpriority="high"
+        imagesrcset="{% for variant, variant_width in preload_image.avif_srcset %}{{ assets_prefix }}/{{ variant }} {{ variant_width }}w{% if not loop.last %}, {% endif %}{% endfor %}"
+        imagesizes="{{ image_sizes }}"
+      />
+      {% endif %}
       <link
         rel="preload"
         as="image"

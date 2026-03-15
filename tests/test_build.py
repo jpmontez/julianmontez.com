@@ -91,6 +91,31 @@ class BuildTests(unittest.TestCase):
             self.assertNotIn('<h1 class="title">', untitled)
             self.assertIn('<nav class="feed-nav" aria-label="Post navigation">', untitled)
 
+    def test_preload_uses_avif_srcset_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dist_dir = Path(tmp) / "dist"
+            dist_dir.mkdir()
+            templates_dir = Path(__file__).resolve().parents[1] / "blog" / "templates"
+            env = make_env(templates_dir)
+
+            post = _post(slug="avif-post", date=dt.date(2024, 3, 1), title="AVIF Post")
+            site = SiteConfig(
+                title="Test Blog",
+                description="Test description",
+                inline_style="body{}",
+                eager_images=2,
+            )
+            url_ctx = UrlContext.from_site(site)
+            build_site([post], site=site, env=env, url_ctx=url_ctx, dist_dir=dist_dir)
+
+            index = (dist_dir / "index.html").read_text(encoding="utf-8")
+            head = index[: index.find("</head>")]
+
+            # The preload link in <head> must target the AVIF srcset
+            self.assertIn('type="image/avif"', head)
+            self.assertIn("photo-480w.avif", head)
+            self.assertIn("photo-800w.avif", head)
+
 
 if __name__ == "__main__":
     unittest.main()

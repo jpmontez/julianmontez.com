@@ -161,7 +161,11 @@ def _build_index_pages(
         )
         lcp_meta = select_lcp_meta(feed_images)
         preload = (
-            PreloadImage(src=image_src(lcp_meta), srcset=lcp_meta.srcset) if lcp_meta else None
+            PreloadImage(
+                src=image_src(lcp_meta), srcset=lcp_meta.srcset, avif_srcset=lcp_meta.avif_srcset
+            )
+            if lcp_meta
+            else None
         )
 
         render_page(
@@ -206,7 +210,11 @@ def _build_post_pages(
         post_images = select_above_fold_metas(post.images_meta, eager_images_count)
         post_lcp_meta = select_lcp_meta(post_images)
         preload = (
-            PreloadImage(src=image_src(post_lcp_meta), srcset=post_lcp_meta.srcset)
+            PreloadImage(
+                src=image_src(post_lcp_meta),
+                srcset=post_lcp_meta.srcset,
+                avif_srcset=post_lcp_meta.avif_srcset,
+            )
             if post_lcp_meta
             else None
         )
