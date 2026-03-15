@@ -11,9 +11,10 @@ interface Props {
   images: SlideImage[];
   eagerCount?: number;
   lcpIndex?: number;
+  linkHref?: string;
 }
 
-const { images, eagerCount = 2, lcpIndex = 0 } = Astro.props;
+const { images, eagerCount = 2, lcpIndex = -1, linkHref } = Astro.props;
 ---
 
 <section class="slideshow" aria-label="Post image slideshow" data-slideshow>
@@ -25,7 +26,8 @@ const { images, eagerCount = 2, lcpIndex = 0 } = Astro.props;
             image={image.src}
             alt={image.alt}
             isEager={i < eagerCount}
-            isLcp={i === lcpIndex}
+            isLcp={i === lcpIndex && lcpIndex >= 0}
+            linkHref={linkHref}
           />
         </div>
       ))}
