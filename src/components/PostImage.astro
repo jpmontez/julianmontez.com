@@ -13,7 +13,10 @@ interface Props {
 
 const { image, alt, isEager = false, isLcp = false, linkHref } = Astro.props;
 
-const RESPONSIVE_WIDTHS = [480, 720, 1080];
+// Widths are derived from the max CSS display size (520px, see config.ts imageSizes):
+//   520px = 1× desktop exact match
+//   1040px = 2× desktop (Retina) exact match, also good for 2× mobile (~390–430px viewport)
+const RESPONSIVE_WIDTHS = [520, 1040];
 const AVIF_QUALITY = 40;
 const WEBP_QUALITY = 80;
 const JPEG_QUALITY = 85;
