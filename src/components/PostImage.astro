@@ -25,11 +25,12 @@ const aspectRatio = sourceHeight / sourceWidth;
 // For native format, only generate widths smaller than original
 const nativeWidths = RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth);
 
-// For transcoded formats, include widths smaller than original + the original width itself
-const transcodedWidths = [
-  ...RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth),
-  sourceWidth,
-];
+// For transcoded formats, cap at the largest responsive width for large sources
+// (avoids generating a multi-megapixel AVIF that mobile would wastefully select)
+const MAX_RESPONSIVE_WIDTH = Math.max(...RESPONSIVE_WIDTHS);
+const transcodedWidths = sourceWidth > MAX_RESPONSIVE_WIDTH
+  ? RESPONSIVE_WIDTHS
+  : [...RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth), sourceWidth];
 
 // Determine native format from source
 const nativeFormat = image.format === 'png' ? 'png' : 'jpg';

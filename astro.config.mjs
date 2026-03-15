@@ -5,6 +5,9 @@ export default defineConfig({
   site: 'https://julianmontez.com',
   output: 'static',
   integrations: [sitemap()],
+  build: {
+    inlineStylesheets: 'always',
+  },
   image: {
     service: {
       entrypoint: 'astro/assets/services/sharp',
