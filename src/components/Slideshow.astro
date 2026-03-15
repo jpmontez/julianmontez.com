@@ -123,7 +123,8 @@ const { images, eagerCount = 2, lcpIndex = -1, linkHref } = Astro.props;
       });
     }
     slides.forEach(function (slide, slideIndex) {
-      slide.addEventListener("click", function () {
+      slide.addEventListener("click", function (e) {
+        if (e.target.closest && e.target.closest('a')) return;
         activateState();
         setActive(slideIndex);
       });
@@ -152,22 +153,25 @@ const { images, eagerCount = 2, lcpIndex = -1, linkHref } = Astro.props;
     });
     snapCenter();
   });
-  window.addEventListener("keydown", function (event) {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
-      return;
-    }
-    if (isTypingTarget(event.target)) {
-      return;
-    }
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
-      return;
-    }
-    var state = activeState || slideshowStates[0];
-    if (!state || !state.setActive) {
-      return;
-    }
-    event.preventDefault();
-    state.setActive(state.index + (event.key === "ArrowRight" ? 1 : -1));
-  });
+  if (!window.__slideshowKeyListenerAdded) {
+    window.__slideshowKeyListenerAdded = true;
+    window.addEventListener("keydown", function (event) {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+        return;
+      }
+      var state = activeState || slideshowStates[0];
+      if (!state || !state.setActive) {
+        return;
+      }
+      event.preventDefault();
+      state.setActive(state.index + (event.key === "ArrowRight" ? 1 : -1));
+    });
+  }
 })();
 </script>
