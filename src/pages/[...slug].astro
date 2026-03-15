@@ -80,6 +80,7 @@ const headline = title || displayDate;
   ogImageUrl={ogImageUrl}
 >
   <script
+    is:inline
     slot="head"
     type="application/ld+json"
     set:html={JSON.stringify({
