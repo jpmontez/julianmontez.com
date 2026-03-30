@@ -107,6 +107,26 @@ header.site .tagline {
   color: var(--muted);
 }
 
+header.site .tagline a {
+  text-decoration: none;
+}
+
+header.site .tagline a:hover {
+  text-decoration: underline;
+}
+
+.image-stack {
+  max-width: 520px;
+  margin: 0 auto 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.image-stack figure {
+  margin: 0;
+}
+
 article.post {
   margin: 0 auto 96px;
   text-align: center;
