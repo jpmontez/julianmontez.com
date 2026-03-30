@@ -2,7 +2,6 @@
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PostImage from '../components/PostImage.astro';
-import Slideshow from '../components/Slideshow.astro';
 import { siteConfig } from '../config';
 
 const allPosts = await getCollection('posts');
@@ -66,12 +65,17 @@ function getLocationInfo(location: typeof posts[0]['data']['location']) {
     return (
       <article class={`post ${post.data.layout}`}>
         {post.data.images.length > 1 ? (
-          <Slideshow
-            images={post.data.images}
-            linkHref={postUrl}
-            eagerCount={isEager ? 1 : 0}
-            lcpIndex={isLcp ? 0 : -1}
-          />
+          <div class="image-stack">
+            {post.data.images.map((img, i) => (
+              <PostImage
+                image={img.src}
+                alt={img.alt}
+                linkHref={postUrl}
+                isEager={isEager && i === 0}
+                isLcp={isLcp && i === 0}
+              />
+            ))}
+          </div>
         ) : post.data.images.length === 1 ? (
           <PostImage
             image={post.data.images[0].src}
