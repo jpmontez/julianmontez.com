@@ -39,7 +39,7 @@ concurrency:
 | Setup Node.js | `actions/setup-node@v6` (was v4) |
 | Install dependencies | `npm ci` — unchanged |
 | Build | `npm run build` — replaces separate `npx astro check` + `npx astro build` |
-| Upload artifact | **New.** Upload `dist/` via `actions/upload-artifact@v4`, retention 1 day |
+| Upload artifact | **New.** Upload `dist/` via `actions/upload-artifact@v6`, retention 1 day |
 
 ### `deploy` job
 
@@ -47,7 +47,7 @@ Stripped down to two steps — no checkout, no Node setup, no `npm ci`, no build
 
 | Step | Change |
 |---|---|
-| Download artifact | **New.** Download `dist/` via `actions/download-artifact@v4` |
+| Download artifact | **New.** Download `dist/` via `actions/download-artifact@v8` |
 | Deploy to Cloudflare Pages | `cloudflare/wrangler-action@v3` — unchanged |
 
 `needs: validate` and `if: github.event_name != 'pull_request'` are preserved.
@@ -57,14 +57,14 @@ Stripped down to two steps — no checkout, no Node setup, no `npm ci`, no build
 - **Name:** `dist`
 - **Path:** `dist/`
 - **Retention:** 1 day — only needs to survive the current workflow run
-- Upload action: `actions/upload-artifact@v4`
-- Download action: `actions/download-artifact@v4`
+- Upload action: `actions/upload-artifact@v6`
+- Download action: `actions/download-artifact@v8`
 
 ## Non-Changes
 
 - `actions/checkout@v6` — confirmed valid, no change needed
 - `cloudflare/wrangler-action@v3` — unchanged
-- Node version `22` — unchanged
+- Node version — updated from `22` to `24` (latest LTS)
 - `npm` cache in setup-node — unchanged
 - All secrets references — unchanged
 - `permissions`, `environment` blocks — unchanged
