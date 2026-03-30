@@ -112,6 +112,7 @@ header.site .tagline a {
 }
 
 header.site .tagline a:hover {
+  color: inherit;
   text-decoration: underline;
 }
 
