@@ -108,6 +108,7 @@ header.site .tagline {
 }
 
 header.site .tagline a {
+  color: inherit;
   text-decoration: none;
 }
 
