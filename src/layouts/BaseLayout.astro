@@ -91,7 +91,11 @@ const currentYear = new Date().getFullYear();
     <div class="page">
       <header class="site">
         <span class="title"><a href="/">{siteConfig.title}</a></span>
-        <span class="tagline">{siteConfig.tagline}</span>
+        <span class="tagline">
+          {siteConfig.tagline}
+          <span aria-hidden="true"> | </span>
+          <a href={`mailto:${siteConfig.email}`}>Email</a>
+        </span>
       </header>
       <main id="main">
         <slot />
