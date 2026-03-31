@@ -85,7 +85,7 @@ const sizes = siteConfig.imageSizes;
 const loading = isEager ? 'eager' : 'lazy';
 ---
 
-<figure>
+<figure style={`aspect-ratio: ${fallbackWidth} / ${fallbackHeight};`}>
   {linkHref ? (
     <a class="post-image-link" href={linkHref}>
       <picture>

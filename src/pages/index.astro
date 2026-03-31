@@ -71,7 +71,7 @@ function getLocationInfo(location: typeof posts[0]['data']['location']) {
                 image={img.src}
                 alt={img.alt}
                 linkHref={postUrl}
-                isEager={isEager && i === 0}
+                isEager={index === 0 ? isEager : (isEager && i === 0)}
                 isLcp={isLcp && i === 0}
               />
             ))}
