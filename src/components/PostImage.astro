@@ -15,11 +15,14 @@ const { image, alt, isEager = false, isLcp = false, linkHref } = Astro.props;
 
 // Widths are derived from the max CSS display size (520px, see config.ts imageSizes):
 //   520px = 1× desktop exact match
-//   1040px = 2× desktop (Retina) exact match, also good for 2× mobile (~390–430px viewport)
-const RESPONSIVE_WIDTHS = [520, 760, 1040];
+//   640px = ~1.75× mobile (Moto G Power class devices, 390px × 1.75 DPR ≈ 614px)
+//   760px = 2× mid-range mobile
+//   1040px = 2× desktop (Retina) exact match
+const RESPONSIVE_WIDTHS = [520, 640, 760, 1040];
 const AVIF_QUALITY = 40;
 const WEBP_QUALITY = 80;
 const JPEG_QUALITY = 85;
+const DISPLAY_WIDTH = 520; // matches max CSS display size (.post figure max-width)
 
 const sourceWidth = image.width;
 const sourceHeight = image.height;
@@ -78,14 +81,13 @@ const fallback = nativeVariants.length > 0
   ? nativeVariants[nativeVariants.length - 1]
   : await getImage({ src: image, format: nativeFormat, quality: JPEG_QUALITY });
 
-const fallbackWidth = fallback.attributes.width;
-const fallbackHeight = Math.round(Number(fallbackWidth) * aspectRatio);
+const displayHeight = Math.round(DISPLAY_WIDTH * aspectRatio);
 
 const sizes = siteConfig.imageSizes;
 const loading = isEager ? 'eager' : 'lazy';
 ---
 
-<figure style={`aspect-ratio: ${fallbackWidth} / ${fallbackHeight};`}>
+<figure style={`aspect-ratio: ${DISPLAY_WIDTH} / ${displayHeight};`}>
   {linkHref ? (
     <a class="post-image-link" href={linkHref}>
       <picture>
@@ -96,8 +98,8 @@ const loading = isEager ? 'eager' : 'lazy';
           alt={alt}
           srcset={nativeSrcset}
           sizes={sizes}
-          width={fallbackWidth}
-          height={fallbackHeight}
+          width={DISPLAY_WIDTH}
+          height={displayHeight}
           loading={loading}
           fetchpriority={isLcp ? 'high' : undefined}
           decoding="async"
@@ -113,8 +115,8 @@ const loading = isEager ? 'eager' : 'lazy';
         alt={alt}
         srcset={nativeSrcset}
         sizes={sizes}
-        width={fallbackWidth}
-        height={fallbackHeight}
+        width={DISPLAY_WIDTH}
+        height={displayHeight}
         loading={loading}
         fetchpriority={isLcp ? 'high' : undefined}
         decoding="async"
