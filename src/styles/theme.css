@@ -172,6 +172,7 @@ article.post {
 .post figure {
   margin: 0 auto 18px;
   max-width: 520px;
+  width: 100%;
   box-shadow: var(--shadow);
   background: white;
 }
