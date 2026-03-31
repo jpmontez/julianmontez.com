@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
+import { getImage } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PostImage from '../components/PostImage.astro';
 import { siteConfig } from '../config';
@@ -51,9 +52,44 @@ function getLocationInfo(location: typeof posts[0]['data']['location']) {
   }
   return { name: undefined, lat: undefined, lon: undefined };
 }
+
+// Generate preload data for the first post's first image (LCP candidate)
+const firstImage = posts[0]?.data.images[0];
+let preloadImage: {
+  src: string;
+  srcset?: string;
+  avifSrcset?: string;
+  sizes?: string;
+} | undefined;
+if (firstImage) {
+  const WIDTHS = [520, 640, 760, 1040];
+  const AVIF_Q = 40;
+  const JPEG_Q = 85;
+  const srcWidth = firstImage.src.width;
+  const nativeFormat = firstImage.src.format === 'png' ? 'png' as const : 'jpg' as const;
+  const [preloadAvif, preloadNative] = await Promise.all([
+    Promise.all(
+      WIDTHS.map((w) => getImage({ src: firstImage.src, width: w, format: 'avif', quality: AVIF_Q }))
+    ),
+    Promise.all(
+      WIDTHS.filter((w) => w < srcWidth).map((w) =>
+        getImage({ src: firstImage.src, width: w, format: nativeFormat, quality: JPEG_Q })
+      )
+    ),
+  ]);
+  const fallbackSrc = preloadNative.length > 0
+    ? preloadNative[preloadNative.length - 1].src
+    : preloadAvif[0].src;
+  preloadImage = {
+    src: fallbackSrc,
+    avifSrcset: preloadAvif.map((v) => `${v.src} ${v.attributes.width}w`).join(', '),
+    srcset: preloadNative.map((v) => `${v.src} ${v.attributes.width}w`).join(', '),
+    sizes: siteConfig.imageSizes,
+  };
+}
 ---
 
-<BaseLayout pageTitle={siteConfig.title}>
+<BaseLayout pageTitle={siteConfig.title} preloadImage={preloadImage}>
   {rendered.map(({ post, Content }, index) => {
     const postUrl = getPostUrl(post);
     const { display, iso } = formatDate(post.data.date);
@@ -72,7 +108,7 @@ function getLocationInfo(location: typeof posts[0]['data']['location']) {
                 alt={img.alt}
                 linkHref={postUrl}
                 isEager={index === 0 ? isEager : (isEager && i === 0)}
-                isLcp={isLcp && i === 0}
+                isLcp={isLcp}
               />
             ))}
           </div>
