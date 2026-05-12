@@ -101,6 +101,10 @@ const currentYear = new Date().getFullYear();
         <slot />
       </main>
       <footer class="footer">
+        <a href="/feed.xml">Atom</a>
+        <span aria-hidden="true"> · </span>
+        <a href="/rss.xml">RSS</a>
+        <span aria-hidden="true"> · </span>
         &copy; {currentYear}
       </footer>
     </div>
