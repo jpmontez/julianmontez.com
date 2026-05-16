@@ -11,3 +11,6 @@ node_modules/
 # Misc.
 _refs/
 .worktrees/
+
+# Claude Code
+.claude/settings.local.json
