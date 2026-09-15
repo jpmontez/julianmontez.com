@@ -27,10 +27,10 @@ export function displayDate(date: Date) {
 
 // Widths are derived from the max CSS display size (520px, see config.ts imageSizes):
 //   520px = 1× desktop exact match
-//   640px = ~1.75× mobile (Moto G Power class devices, 390px × 1.75 DPR ≈ 614px)
+//   660px = 1.75× mobile (Lighthouse's Moto G Power: (412px - 36px padding) × 1.75 DPR ≈ 658px)
 //   760px = 2× mid-range mobile
 //   1040px = 2× desktop (Retina) exact match
-const WIDTHS = [520, 640, 760, 1040];
+const WIDTHS = [520, 660, 760, 1040];
 
 // Shared by PostImage and the feed's LCP preload so both reference identical URLs.
 export async function imageSrcsets(image: ImageMetadata) {

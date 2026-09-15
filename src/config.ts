@@ -5,7 +5,6 @@ export const siteConfig = {
   description: 'A topographical photoblog by Julian Montez',
   author: 'Julian Montez',
   postsPerPage: 10,
-  eagerImages: 3,
   imageSizes: '(max-width: 577px) 90vw, 520px',
   feedMaxPosts: 25,
 } as const;

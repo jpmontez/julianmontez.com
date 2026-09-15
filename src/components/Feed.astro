@@ -25,7 +25,6 @@ const pageTitle = pageNum === 1 ? siteConfig.title : `Page ${pageNum} — ${site
 <BaseLayout pageTitle={pageTitle} preloadSrcset={preloadSrcset}>
   {rendered.map(({ post, Content }, index) => {
     const postUrl = `/${postSlug(post)}/`;
-    const isEager = index < siteConfig.eagerImages;
 
     return (
       <article class="post">
@@ -35,7 +34,7 @@ const pageTitle = pageNum === 1 ? siteConfig.title : `Page ${pageNum} — ${site
               image={img.src}
               alt={img.alt}
               linkHref={postUrl}
-              isEager={isEager && (index === 0 || i === 0)}
+              isEager={index === 0 && i === 0}
               isLcp={index === 0 && i === 0}
             />
           ))}
