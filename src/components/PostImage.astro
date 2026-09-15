@@ -1,7 +1,7 @@
 ---
 import type { ImageMetadata } from 'astro';
-import { getImage } from 'astro:assets';
 import { siteConfig } from '../config';
+import { imageSrcsets } from '../utils';
 
 interface Props {
   image: ImageMetadata;
@@ -13,114 +13,28 @@ interface Props {
 
 const { image, alt, isEager = false, isLcp = false, linkHref } = Astro.props;
 
-// Widths are derived from the max CSS display size (520px, see config.ts imageSizes):
-//   520px = 1× desktop exact match
-//   640px = ~1.75× mobile (Moto G Power class devices, 390px × 1.75 DPR ≈ 614px)
-//   760px = 2× mid-range mobile
-//   1040px = 2× desktop (Retina) exact match
-const RESPONSIVE_WIDTHS = [520, 640, 760, 1040];
-const AVIF_QUALITY = 40;
-const WEBP_QUALITY = 80;
-const JPEG_QUALITY = 85;
+const { avif, webp, native, fallback } = await imageSrcsets(image);
 const DISPLAY_WIDTH = 520; // matches max CSS display size (.post figure max-width)
-
-const sourceWidth = image.width;
-const sourceHeight = image.height;
-const aspectRatio = sourceHeight / sourceWidth;
-
-// For native format, only generate widths smaller than original
-const nativeWidths = RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth);
-
-// For transcoded formats, cap at the largest responsive width for large sources
-// (avoids generating a multi-megapixel AVIF that mobile would wastefully select)
-const MAX_RESPONSIVE_WIDTH = Math.max(...RESPONSIVE_WIDTHS);
-const transcodedWidths = sourceWidth > MAX_RESPONSIVE_WIDTH
-  ? RESPONSIVE_WIDTHS
-  : [...RESPONSIVE_WIDTHS.filter((w) => w < sourceWidth), sourceWidth];
-
-// Determine native format from source
-const nativeFormat = image.format === 'png' ? 'png' : 'jpg';
-
-// Generate all variants in parallel
-const [avifVariants, webpVariants, nativeVariants] = await Promise.all([
-  Promise.all(
-    transcodedWidths.map((w) =>
-      getImage({ src: image, width: w, format: 'avif', quality: AVIF_QUALITY })
-    )
-  ),
-  Promise.all(
-    transcodedWidths.map((w) =>
-      getImage({ src: image, width: w, format: 'webp', quality: WEBP_QUALITY })
-    )
-  ),
-  Promise.all(
-    nativeWidths.map((w) =>
-      getImage({
-        src: image,
-        width: w,
-        format: nativeFormat,
-        quality: JPEG_QUALITY,
-      })
-    )
-  ),
-]);
-
-// Build srcset strings
-function buildSrcset(variants: Awaited<ReturnType<typeof getImage>>[]) {
-  return variants
-    .map((v) => `${v.src} ${v.attributes.width}w`)
-    .join(', ');
-}
-
-const avifSrcset = buildSrcset(avifVariants);
-const webpSrcset = buildSrcset(webpVariants);
-const nativeSrcset = buildSrcset(nativeVariants);
-
-// Use the largest native variant as the fallback src
-const fallback = nativeVariants.length > 0
-  ? nativeVariants[nativeVariants.length - 1]
-  : await getImage({ src: image, format: nativeFormat, quality: JPEG_QUALITY });
-
-const displayHeight = Math.round(DISPLAY_WIDTH * aspectRatio);
-
-const sizes = siteConfig.imageSizes;
-const loading = isEager ? 'eager' : 'lazy';
+const displayHeight = Math.round(DISPLAY_WIDTH * (image.height / image.width));
+const Wrapper = linkHref ? 'a' : 'div';
 ---
 
 <figure style={`aspect-ratio: ${DISPLAY_WIDTH} / ${displayHeight};`}>
-  {linkHref ? (
-    <a class="post-image-link" href={linkHref}>
-      <picture>
-        <source type="image/avif" srcset={avifSrcset} sizes={sizes} />
-        <source type="image/webp" srcset={webpSrcset} sizes={sizes} />
-        <img
-          src={fallback.src}
-          alt={alt}
-          srcset={nativeSrcset}
-          sizes={sizes}
-          width={DISPLAY_WIDTH}
-          height={displayHeight}
-          loading={loading}
-          fetchpriority={isLcp ? 'high' : undefined}
-          decoding="async"
-        />
-      </picture>
-    </a>
-  ) : (
+  <Wrapper class={linkHref && 'post-image-link'} href={linkHref}>
     <picture>
-      <source type="image/avif" srcset={avifSrcset} sizes={sizes} />
-      <source type="image/webp" srcset={webpSrcset} sizes={sizes} />
+      <source type="image/avif" srcset={avif} sizes={siteConfig.imageSizes} />
+      <source type="image/webp" srcset={webp} sizes={siteConfig.imageSizes} />
       <img
-        src={fallback.src}
+        src={fallback}
         alt={alt}
-        srcset={nativeSrcset}
-        sizes={sizes}
+        srcset={native}
+        sizes={siteConfig.imageSizes}
         width={DISPLAY_WIDTH}
         height={displayHeight}
-        loading={loading}
+        loading={isEager ? 'eager' : 'lazy'}
         fetchpriority={isLcp ? 'high' : undefined}
         decoding="async"
       />
     </picture>
-  )}
+  </Wrapper>
 </figure>

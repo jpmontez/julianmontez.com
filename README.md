@@ -18,6 +18,7 @@ src/
   assets/photos/       # full-resolution source images
   content/posts/       # Markdown posts (YAML front matter)
   components/
+    Feed.astro         # feed page body shared by index and page/[page]
     PostImage.astro    # responsive <picture> with AVIF/WebP srcset
     Slideshow.astro    # multi-image horizontal slideshow
   layouts/
@@ -26,11 +27,12 @@ src/
     index.astro        # paginated feed (page 1)
     page/[page].astro  # paginated feed (pages 2+)
     [...slug].astro    # post detail pages
-    feed.xml.ts        # Atom feed
-    rss.xml.ts         # RSS feed
+    feed.xml.ts        # RSS feed
+    rss.xml.ts         # same feed at a legacy URL
   styles/
     theme.css          # global stylesheet
   config.ts            # site config
+  utils.ts             # post and image helpers
 scripts/
   import_lightroom.py  # import Lightroom JPG exports
 ```
@@ -45,25 +47,20 @@ date: 2024-10-12
 images:
   - src: ../../assets/photos/2024-10-12-photo.jpg
     alt: "Describe the photo."
-excerpt: "Optional excerpt."
-location:
-  name: "Prospect Park, Brooklyn, NY"
-  lat: 40.66020
-  lon: -73.96900
 ---
 
 Optional markdown body.
 ```
 
-Place the source image in `src/assets/photos/`. Astro generates responsive variants (480/720/1080px in AVIF, WebP, and JPEG) at build time.
+Place the source image in `src/assets/photos/`. Astro generates responsive variants (520/640/760/1040px in AVIF, WebP, and JPEG) at build time.
 
 ## Lightroom Import
 
 ```bash
-python scripts/import_lightroom.py [LIGHTROOM_EXPORT_DIR]
+uv run scripts/import_lightroom.py [--source DIR] [--overwrite]
 ```
 
-Imports files matching `YYYYMMDD-DSC_NNNN.jpg`, copies them to `src/assets/photos/`, and scaffolds post files in `src/content/posts/`.
+Imports files matching `YYYYMMDD-DSC_NNNN.jpg` (default source: `~/Desktop`), copies them to `src/assets/photos/`, and scaffolds post files in `src/content/posts/` with alt text written by headless Claude Code (`claude -p`), billed to your Claude Code login rather than the API. `uv` provides Python 3.14+ from the script's inline metadata; the script has no other dependencies. Requires the `claude` CLI on your PATH, logged in. If alt text generation fails, the post is still written and a warning names the image to caption by hand.
 
 ## CI/CD
 

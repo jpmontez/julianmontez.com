@@ -15,19 +15,7 @@ const posts = defineCollection({
             alt: z.string().default('Photo'),
           })
         )
-        .default([]),
-      excerpt: z.string().optional(),
-      layout: z.string().default('photo'),
-      location: z
-        .union([
-          z.string(),
-          z.object({
-            name: z.string().optional(),
-            lat: z.number().optional(),
-            lon: z.number().optional(),
-          }),
-        ])
-        .optional(),
+        .min(1),
     }),
 });
 

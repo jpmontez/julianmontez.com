@@ -1,160 +1,128 @@
-#!/usr/bin/env python3
-"""Import Lightroom JPG exports from the Desktop into the blog assets and scaffold posts."""
-
-from __future__ import annotations
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.14"
+# ///
+"""Import Lightroom JPG exports into the blog assets and scaffold posts with alt text from Claude Code."""
 
 import argparse
 import datetime as dt
-import logging
+import itertools
+import json
+import os
 import re
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
-
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DESKTOP = Path.home() / "Desktop"
-STATIC_DIR = ROOT / "src" / "assets" / "photos"
+PHOTOS_DIR = ROOT / "src" / "assets" / "photos"
 POSTS_DIR = ROOT / "src" / "content" / "posts"
-LOGGER = logging.getLogger("import_lightroom")
 
-# Lightroom export format: YYYMMDD-DSC_NNNN.jpg (per the request; assume 8-digit date)
+# Lightroom export format: YYYYMMDD-DSC_NNNN.jpg
 SOURCE_PATTERN = re.compile(r"^(?P<date>\d{8})-DSC_(?P<num>\d{4,})\.jpg$", re.IGNORECASE)
+
+ALT_PROMPT = (
+    "Read the image file below, then write alt text for it as a photograph on a photoblog. "
+    "One plain sentence, under 125 characters, describing the subject and setting as a sighted viewer "
+    'would see them. Don\'t begin with "Image of" or "Photo of", and don\'t guess at specific place names. '
+    "Reply with only the alt text, no quotes or commentary."
+)
 
 
 @dataclass
 class Photo:
     source: Path
     date: dt.date
-    number: str
     destination: Path
 
 
-def parse_candidates(source_dir: Path) -> list[Photo]:
-    photos: list[Photo] = []
+def parse_candidates(source_dir):
+    photos = []
     for path in sorted(source_dir.iterdir()):
-        if not path.is_file():
-            continue
         match = SOURCE_PATTERN.match(path.name)
-        if not match:
+        if not (path.is_file() and match):
             continue
-
-        raw_date = match.group("date")
-        number = match.group("num")
         try:
-            date = dt.datetime.strptime(raw_date, "%Y%m%d").date()
+            date = dt.datetime.strptime(match["date"], "%Y%m%d").date()
         except ValueError:
-            LOGGER.warning("Skipping %s: invalid date %s", path.name, raw_date)
+            print(f"Skipping {path.name}: invalid date {match['date']}", file=sys.stderr)
             continue
-
-        dest_name = f"{date:%Y-%m-%d}-DSC_{number}{path.suffix.lower()}"
-        photos.append(Photo(path, date, number, STATIC_DIR / dest_name))
+        photos.append(Photo(path, date, PHOTOS_DIR / f"{date}-DSC_{match['num']}{path.suffix.lower()}"))
     return photos
 
 
-def prompt_overwrite(photo: Photo) -> bool:
-    prompt = f"{photo.destination.name} already exists. Overwrite with {photo.source.name}? [y/N]: "
-    reply = input(prompt).strip().lower()
-    return reply in {"y", "yes"}
-
-
-def copy_photos(photos: Iterable[Photo], overwrite: bool) -> list[Photo]:
-    imported: list[Photo] = []
-    STATIC_DIR.mkdir(parents=True, exist_ok=True)
-
+def copy_photos(photos, overwrite):
+    imported = []
     for photo in photos:
-        if photo.destination.exists():
-            if overwrite or prompt_overwrite(photo):
-                LOGGER.info("Overwriting %s with %s", photo.destination.name, photo.source.name)
-            else:
-                LOGGER.info("Skipping %s (exists)", photo.destination.name)
+        if photo.destination.exists() and not overwrite:
+            reply = input(f"{photo.destination.name} already exists. Overwrite with {photo.source.name}? [y/N]: ")
+            if reply.strip().lower() not in {"y", "yes"}:
+                print(f"Skipping {photo.destination.name} (exists)")
                 continue
         shutil.copy2(photo.source, photo.destination)
         imported.append(photo)
-        LOGGER.info("Copied %s -> %s", photo.source, photo.destination)
+        print(f"Copied {photo.source} -> {photo.destination}")
     return imported
 
 
-def sanitize_slug(value: str) -> str:
-    slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", value).strip("-").lower()
-    return slug
-
-
-def prompt_slug(date: dt.date, default_slug: str) -> str:
-    prompt = f"Multiple images on {date:%Y-%m-%d}. Enter a custom name (default: {default_slug}): "
+def prompt_slug(date, default):
     while True:
-        user_input = input(prompt).strip()
-        slug = sanitize_slug(user_input) if user_input else default_slug
-        if not slug:
-            print("Slug cannot be empty.")
-            continue
-        if not slug.startswith(f"{date:%Y-%m-%d}"):
-            slug = f"{date:%Y-%m-%d}-{slug}"
-        return slug
+        name = input(f"Multiple images on {date}. Enter a custom name (default: {default}): ").strip()
+        slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", name).strip("-").lower() if name else default
+        if slug:
+            return slug if slug.startswith(str(date)) else f"{date}-{slug}"
+        print("Slug cannot be empty.")
 
 
-def ensure_post_path(date: dt.date, slug: str) -> Path:
-    POSTS_DIR.mkdir(parents=True, exist_ok=True)
-    return POSTS_DIR / f"{slug}.md"
+def choose_post_path(date, photos):
+    slug = photos[0].destination.stem if len(photos) == 1 else prompt_slug(date, f"{date}-photos")
+    while (path := POSTS_DIR / f"{slug}.md").exists():
+        print(f"{path} already exists. Enter another name.")
+        slug = prompt_slug(date, slug)
+    return path
 
 
-def choose_slug(date: dt.date, photos: list[Photo]) -> tuple[str, Path]:
-    if len(photos) == 1:
-        base_slug = photos[0].destination.stem
-    else:
-        default = f"{date:%Y-%m-%d}-photos"
-        base_slug = prompt_slug(date, default)
-
-    while True:
-        post_path = ensure_post_path(date, base_slug)
-        if not post_path.exists():
-            return base_slug, post_path
-        print(f"{post_path} already exists. Enter another name.")
-        base_slug = prompt_slug(date, base_slug)
-
-
-def write_post(post_path: Path, date: dt.date, photos: list[Photo]) -> None:
-    images_lines = [f'  - src: "../../assets/photos/{p.destination.name}"' for p in photos]
-    content_lines = [
-        "---",
-        f"date: {date:%Y-%m-%d}",
-        "images:",
-        *images_lines,
-        'layout: "photo"',
-        "---",
-        "",
-    ]
-    post_path.write_text("\n".join(content_lines), encoding="utf-8")
-    LOGGER.info("Wrote post: %s", post_path)
-
-
-def create_posts(imported: list[Photo]) -> None:
-    if not imported:
-        LOGGER.info("No new photos imported; skipping post creation.")
-        return
-
-    grouped: dict[dt.date, list[Photo]] = {}
-    for photo in imported:
-        grouped.setdefault(photo.date, []).append(photo)
-
-    for photos in grouped.values():
-        photos.sort(key=lambda p: p.number)
-
-    for date, photos in grouped.items():
-        slug, post_path = choose_slug(date, photos)
-        write_post(post_path, date, photos)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Import Lightroom JPG exports from ~/Desktop into the blog assets/posts."
+def alt_text(photo):
+    # Headless Claude Code reads the image with its Read tool. ANTHROPIC_API_KEY is dropped so usage
+    # bills to the Claude Code login instead of a pay-per-use API account.
+    env = {key: value for key, value in os.environ.items() if key != "ANTHROPIC_API_KEY"}
+    result = subprocess.run(
+        ["claude", "-p", f"{ALT_PROMPT}\n\n{photo.destination}", "--allowedTools", "Read"],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=ROOT,
+        env=env,
     )
+    text = result.stdout.strip().strip('"')
+    if not text:
+        raise RuntimeError("Claude Code returned no text")
+    return text
+
+
+def write_post(path, date, photos):
+    lines = ["---", f"date: {date}", "images:"]
+    for photo in photos:
+        lines.append(f'  - src: "../../assets/photos/{photo.destination.name}"')
+        print(f"Generating alt text for {photo.destination.name}...")
+        try:
+            # JSON strings are valid YAML double-quoted scalars, so quotes and colons are escaped safely.
+            lines.append(f"    alt: {json.dumps(alt_text(photo), ensure_ascii=False)}")
+        except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
+            print(f"WARNING: no alt text for {photo.destination.name} ({error}); add it by hand.", file=sys.stderr)
+    lines += ["---", ""]
+    path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"Wrote post: {path}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Import Lightroom JPG exports into the blog assets and posts.")
     parser.add_argument(
         "--source",
         type=Path,
-        default=DEFAULT_DESKTOP,
+        default=Path.home() / "Desktop",
         help="Directory to scan for JPG exports (default: ~/Desktop)",
     )
     parser.add_argument(
@@ -162,17 +130,7 @@ def main() -> int:
         action="store_true",
         help="Overwrite existing files in src/assets/photos without prompting.",
     )
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        help="Logging level (DEBUG, INFO, WARNING, ERROR). Default: INFO",
-    )
     args = parser.parse_args()
-
-    logging.basicConfig(
-        level=args.log_level.upper(),
-        format="%(levelname)s %(message)s",
-    )
 
     source_dir = args.source.expanduser()
     if not source_dir.exists():
@@ -181,11 +139,16 @@ def main() -> int:
 
     candidates = parse_candidates(source_dir)
     if not candidates:
-        LOGGER.info("No Lightroom-style JPG exports found in %s", source_dir)
+        print(f"No Lightroom-style JPG exports found in {source_dir}")
         return 0
 
-    imported = copy_photos(candidates, overwrite=args.overwrite)
-    create_posts(imported)
+    PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
+    POSTS_DIR.mkdir(parents=True, exist_ok=True)
+    imported = copy_photos(candidates, args.overwrite)
+    # Candidates are sorted by filename (YYYYMMDD-DSC_NNNN), so same-day photos are adjacent and in order.
+    for date, group in itertools.groupby(imported, key=lambda photo: photo.date):
+        photos = list(group)
+        write_post(choose_post_path(date, photos), date, photos)
     return 0
 
 

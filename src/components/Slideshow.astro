@@ -2,19 +2,11 @@
 import type { ImageMetadata } from 'astro';
 import PostImage from './PostImage.astro';
 
-interface SlideImage {
-  src: ImageMetadata;
-  alt: string;
-}
-
 interface Props {
-  images: SlideImage[];
-  eagerCount?: number;
-  lcpIndex?: number;
-  linkHref?: string;
+  images: { src: ImageMetadata; alt: string }[];
 }
 
-const { images, eagerCount = 2, lcpIndex = -1, linkHref } = Astro.props;
+const { images } = Astro.props;
 ---
 
 <section class="slideshow" aria-label="Post image slideshow" data-slideshow>
@@ -22,13 +14,7 @@ const { images, eagerCount = 2, lcpIndex = -1, linkHref } = Astro.props;
     <div class="slideshow-track">
       {images.map((image, i) => (
         <div class:list={['slide', { 'is-active': i === 0 }]} data-slide>
-          <PostImage
-            image={image.src}
-            alt={image.alt}
-            isEager={i < eagerCount}
-            isLcp={i === lcpIndex && lcpIndex >= 0}
-            linkHref={linkHref}
-          />
+          <PostImage image={image.src} alt={image.alt} isEager={i < 2} isLcp={i === 0} />
         </div>
       ))}
     </div>
@@ -42,136 +28,70 @@ const { images, eagerCount = 2, lcpIndex = -1, linkHref } = Astro.props;
 
 <script is:inline>
 (function () {
-  var slideshows = document.querySelectorAll("[data-slideshow]");
-  if (!slideshows.length) {
-    return;
-  }
-  var slideshowStates = [];
-  var activeState = null;
-  var isTypingTarget = function (target) {
-    if (!target || !target.tagName) {
-      return false;
-    }
-    if (target.isContentEditable) {
-      return true;
-    }
-    var tag = target.tagName.toUpperCase();
-    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  // Rendered only on post pages with 2+ images, so there is exactly one slideshow.
+  var slideshow = document.querySelector("[data-slideshow]");
+  var viewport = slideshow.querySelector(".slideshow-viewport");
+  var track = slideshow.querySelector(".slideshow-track");
+  var counter = slideshow.querySelector(".slideshow-counter");
+  var slides = slideshow.querySelectorAll("[data-slide]");
+  var index = 0;
+  var centerSlide = function () {
+    var slide = slides[index];
+    var translate = viewport.clientWidth / 2 - (slide.offsetLeft + slide.offsetWidth / 2);
+    track.style.transform = "translateX(" + translate + "px)";
   };
-  slideshows.forEach(function (slideshow) {
-    var viewport = slideshow.querySelector(".slideshow-viewport");
-    var track = slideshow.querySelector(".slideshow-track");
-    var slides = Array.prototype.slice.call(slideshow.querySelectorAll("[data-slide]"));
-    if (slides.length <= 1) {
+  var snapCenter = function () {
+    track.style.transition = "none";
+    centerSlide();
+    track.offsetHeight; /* force reflow */
+    track.style.transition = "";
+  };
+  var setActive = function (nextIndex) {
+    slides[index].classList.remove("is-active");
+    index = (nextIndex + slides.length) % slides.length;
+    slides[index].classList.add("is-active");
+    counter.textContent = (index + 1) + " / " + slides.length;
+    centerSlide();
+  };
+  slideshow.querySelector(".prev").addEventListener("click", function () {
+    setActive(index - 1);
+  });
+  slideshow.querySelector(".next").addEventListener("click", function () {
+    setActive(index + 1);
+  });
+  slides.forEach(function (slide, slideIndex) {
+    slide.addEventListener("click", function () {
+      setActive(slideIndex);
+    });
+    var img = slide.querySelector("img");
+    if (!img.complete) {
+      img.addEventListener("load", snapCenter);
+    }
+  });
+  window.addEventListener("resize", snapCenter);
+  var touchStartX = 0;
+  var touchStartY = 0;
+  slideshow.addEventListener("touchstart", function (e) {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, { passive: true });
+  slideshow.addEventListener("touchend", function (e) {
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    var dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) >= 50 && Math.abs(dy) <= Math.abs(dx)) {
+      setActive(index + (dx < 0 ? 1 : -1));
+    }
+  });
+  window.addEventListener("keydown", function (event) {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
       return;
     }
-    var prev = slideshow.querySelector(".slideshow-control.prev");
-    var next = slideshow.querySelector(".slideshow-control.next");
-    var state = { index: slides.findIndex(function (slide) {
-      return slide.classList.contains("is-active");
-    }) };
-    if (state.index < 0) {
-      state.index = 0;
-      slides[0].classList.add("is-active");
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
     }
-    var centerSlide = function () {
-      if (!viewport || !track) {
-        return;
-      }
-      var slide = slides[state.index];
-      var slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
-      var viewportCenter = viewport.clientWidth / 2;
-      var translate = viewportCenter - slideCenter;
-      track.style.transform = "translateX(" + translate + "px)";
-    };
-    var snapCenter = function () {
-      track.style.transition = 'none';
-      centerSlide();
-      track.offsetHeight; /* force reflow */
-      track.style.transition = '';
-    };
-    var counter = slideshow.querySelector(".slideshow-counter");
-    var setActive = function (nextIndex) {
-      slides[state.index].classList.remove("is-active");
-      state.index = (nextIndex + slides.length) % slides.length;
-      slides[state.index].classList.add("is-active");
-      if (counter) {
-        counter.textContent = (state.index + 1) + " / " + slides.length;
-      }
-      centerSlide();
-    };
-    state.setActive = setActive;
-    slideshowStates.push(state);
-    if (!activeState) {
-      activeState = state;
-    }
-    var activateState = function () {
-      activeState = state;
-    };
-    slideshow.addEventListener("pointerdown", activateState);
-    slideshow.addEventListener("focusin", activateState);
-    if (prev) {
-      prev.addEventListener("click", function () {
-        activateState();
-        setActive(state.index - 1);
-      });
-    }
-    if (next) {
-      next.addEventListener("click", function () {
-        activateState();
-        setActive(state.index + 1);
-      });
-    }
-    slides.forEach(function (slide, slideIndex) {
-      slide.addEventListener("click", function (e) {
-        if (e.target.closest && e.target.closest('a')) return;
-        activateState();
-        setActive(slideIndex);
-      });
-    });
-    slides.forEach(function (slide) {
-      var img = slide.querySelector("img");
-      if (img && !img.complete) {
-        img.addEventListener("load", snapCenter);
-      }
-    });
-    window.addEventListener("resize", snapCenter);
-    var touchStartX = 0;
-    var touchStartY = 0;
-    slideshow.addEventListener("touchstart", function (e) {
-      touchStartX = e.changedTouches[0].clientX;
-      touchStartY = e.changedTouches[0].clientY;
-    }, { passive: true });
-    slideshow.addEventListener("touchend", function (e) {
-      var dx = e.changedTouches[0].clientX - touchStartX;
-      var dy = e.changedTouches[0].clientY - touchStartY;
-      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) {
-        return;
-      }
-      activateState();
-      setActive(state.index + (dx < 0 ? 1 : -1));
-    });
-    snapCenter();
+    event.preventDefault();
+    setActive(index + (event.key === "ArrowRight" ? 1 : -1));
   });
-  if (!window.__slideshowKeyListenerAdded) {
-    window.__slideshowKeyListenerAdded = true;
-    window.addEventListener("keydown", function (event) {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
-        return;
-      }
-      if (isTypingTarget(event.target)) {
-        return;
-      }
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
-        return;
-      }
-      var state = activeState || slideshowStates[0];
-      if (!state || !state.setActive) {
-        return;
-      }
-      event.preventDefault();
-      state.setActive(state.index + (event.key === "ArrowRight" ? 1 : -1));
-    });
-  }
+  snapCenter();
 })();
 </script>
