@@ -65,9 +65,7 @@ const currentYear = new Date().getFullYear();
         <span class="tagline">
           {siteConfig.tagline}
           <span aria-hidden="true"> · </span>
-          {/* email_off stops Cloudflare's Email Obfuscation from injecting email-decode.min.js,
-              an extra script request that competes with the LCP image on mobile. */}
-          <Fragment set:html={'<!--email_off-->'} /><a href={`mailto:${siteConfig.email}`}>Email</a><Fragment set:html={'<!--/email_off-->'} />
+          <a href={`mailto:${siteConfig.email}`}>Email</a>
         </span>
       </header>
       <main id="main">

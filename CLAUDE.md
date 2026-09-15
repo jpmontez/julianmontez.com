@@ -62,7 +62,7 @@ src/styles/
 - The feed's LCP preload is AVIF-only and uses `imageSrcsets()` so its URLs match `PostImage` exactly
 - `src/config.ts` controls title, tagline, pagination, image sizes
 - Only the feed's first image loads eagerly. Extra eager images download alongside the LCP image on Lighthouse's throttled mobile profile and cost LCP points (1.8s → 1.1s when removed)
-- The header `mailto:` link sits inside `<!--email_off-->` so Cloudflare doesn't inject `email-decode.min.js`
+- The header `mailto:` link is intentionally left to Cloudflare Email Obfuscation (spam protection), which injects `email-decode.min.js`; don't wrap it in `<!--email_off-->`
 - Images in `src/assets/photos/` are processed by Astro's sharp pipeline at build time
 
 **View transitions & slideshow patterns (`src/styles/theme.css`, `src/components/Slideshow.astro`):**
