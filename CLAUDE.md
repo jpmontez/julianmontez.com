@@ -105,12 +105,12 @@ Markdown body.
 ## Deployment
 
 Push to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml`:
-- `validate` job: `npm ci` + `npm run build` (`astro check` + `astro build`)
+- `validate` job (PRs only): `npm ci` + `npm run build` (`astro check` + `astro build`)
 - `infra` job (PRs and pushes): `tofu fmt -check`, `tofu validate`, terraform-docs check, `tofu plan -detailed-exitcode` as a drift check. **CI never runs `tofu apply`**; apply locally and commit the encrypted `infra/terraform.tfstate`.
-- `deploy` job (non-PR only, needs `validate` only): `npm run deploy` → `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`: an assets-only Worker (no script) serving `dist/` per `wrangler.jsonc`
+- `deploy` job (non-PR only, independent of `infra`): `npm ci` + `npm run build` + `npm run deploy` → `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`: an assets-only Worker (no script) serving `dist/` per `wrangler.jsonc`
 
 Ownership split — never manage a resource from both tools:
 - Wrangler / `wrangler.jsonc` + deploy flags: the Worker, its assets, its custom domain and the DNS record Cloudflare creates for it
-- `cf` (local devDependency) is for inspection/admin only (`npx cf dns records export`, `npx cf zones settings get …`)
+- `cf` (not installed; `npx` fetches it on demand) is for inspection/admin only (`npx cf dns records export`, `npx cf zones settings get …`)
 - OpenTofu / `infra/`: zone, all other DNS records, zone settings, www→apex redirect rule, Web Analytics
 - No personal values in `infra/*.tf` or `wrangler.jsonc`; site-specific data lives only in `infra/terraform.tfvars`, GitHub repo variables/secrets, and `.env` (gitignored)

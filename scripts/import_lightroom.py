@@ -49,22 +49,25 @@ def parse_candidates(source_dir):
         except ValueError:
             print(f"Skipping {path.name}: invalid date {match['date']}", file=sys.stderr)
             continue
-        photos.append(Photo(path, date, PHOTOS_DIR / f"{date}-DSC_{match['num']}{path.suffix.lower()}"))
+        photos.append(Photo(path, date, PHOTOS_DIR / f"{date}-DSC_{match['num']}.jpg"))
     return photos
 
 
 def copy_photos(photos, overwrite):
-    imported = []
+    """Copy every photo; return only the new ones. An overwritten photo keeps its existing post."""
+    new = []
     for photo in photos:
-        if photo.destination.exists() and not overwrite:
+        exists = photo.destination.exists()
+        if exists and not overwrite:
             reply = input(f"{photo.destination.name} already exists. Overwrite with {photo.source.name}? [y/N]: ")
             if reply.strip().lower() not in {"y", "yes"}:
                 print(f"Skipping {photo.destination.name} (exists)")
                 continue
         shutil.copy2(photo.source, photo.destination)
-        imported.append(photo)
         print(f"Copied {photo.source} -> {photo.destination}")
-    return imported
+        if not exists:
+            new.append(photo)
+    return new
 
 
 def prompt_slug(date, default):
@@ -132,21 +135,14 @@ def main():
     )
     args = parser.parse_args()
 
-    source_dir = args.source.expanduser()
-    if not source_dir.exists():
-        print(f"Source directory {source_dir} does not exist.", file=sys.stderr)
-        return 1
-
-    candidates = parse_candidates(source_dir)
+    candidates = parse_candidates(args.source)
     if not candidates:
-        print(f"No Lightroom-style JPG exports found in {source_dir}")
+        print(f"No Lightroom-style JPG exports found in {args.source}")
         return 0
 
-    PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
-    POSTS_DIR.mkdir(parents=True, exist_ok=True)
-    imported = copy_photos(candidates, args.overwrite)
+    new = copy_photos(candidates, args.overwrite)
     # Candidates are sorted by filename (YYYYMMDD-DSC_NNNN), so same-day photos are adjacent and in order.
-    for date, group in itertools.groupby(imported, key=lambda photo: photo.date):
+    for date, group in itertools.groupby(new, key=lambda photo: photo.date):
         photos = list(group)
         write_post(choose_post_path(date, photos), date, photos)
     return 0

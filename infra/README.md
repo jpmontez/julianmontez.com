@@ -27,10 +27,9 @@ tools ([Cloudflare's guidance](https://developers.cloudflare.com/terraform/advan
 |---|---|
 | `versions.tf` | OpenTofu and provider pins, state/plan encryption |
 | `provider.tf` | Cloudflare provider (token from `CLOUDFLARE_API_TOKEN`) |
-| `variables.tf` | All inputs, typed and validated |
+| `variables.tf` | All inputs, typed |
 | `zone.tf`, `dns.tf`, `settings.tf`, `redirects.tf`, `waf.tf`, `bots.tf`, `analytics.tf` | One file per product |
-| `imports.tf` | Import blocks driven by `var.adopt`; do nothing for a fresh setup |
-| `outputs.tf` | Zone ID, nameservers, Web Analytics site tag |
+| `outputs.tf` | Zone ID, nameservers |
 | `terraform.tfvars` | **The only file with site-specific values.** Replace it with your own |
 | `terraform.tfvars.example` | Commented template |
 | `terraform.tfstate` | Encrypted state, committed on purpose (see [State](#state)) |
@@ -88,24 +87,28 @@ Use this when the zone already exists and was configured in the dashboard.
    cf-terraforming generate --account "$TF_VAR_account_id" --resource-type cloudflare_web_analytics_site
    ```
    `npx cf dns records list` gives the same record IDs as JSON.
-2. Translate the output into `terraform.tfvars`: records into `dns_records`, and IDs into `adopt`:
+2. Translate the output into `terraform.tfvars` (records into `dns_records`) and a temporary
+   `imports.tf` with one `import` block per existing resource, e.g.:
    ```hcl
-   adopt = {
-     zone_id               = "<zone id>"
-     dns_records           = { mx_1 = "<record id>", spf = "<record id>" } # same keys as dns_records
-     www_record_id         = "<id of the proxied www placeholder record>"
-     redirect_ruleset_id   = "<http_request_dynamic_redirect entry point id>"
-     web_analytics_site_id = "<site tag>"
+   import {
+     to = cloudflare_zone.this
+     id = "<zone id>"
+   }
+   import {
+     for_each = { mx_1 = "<record id>", spf = "<record id>" } # same keys as dns_records
+     to       = cloudflare_dns_record.this[each.key]
+     id       = "<zone id>/${each.value}"
    }
    ```
-   Every key in `zone_settings` is imported when `adopt.zone_id` is set.
+   Also import each `cloudflare_zone_setting.this["<setting>"]` (`<zone id>/<setting>`),
+   `cloudflare_dns_record.www`, `cloudflare_ruleset.redirects` and `cloudflare_ruleset.waf_custom[0]`
+   (`zones/<zone id>/<ruleset id>`), `cloudflare_web_analytics_site.this` (`<account id>/<site tag>`)
+   and `cloudflare_bot_management.this` (`<zone id>`).
 3. Iterate until adoption is exact:
    ```sh
    tofu plan   # goal: "N to import, 0 to add, 0 to change, 0 to destroy"
    ```
-   Fix `terraform.tfvars` until nothing but imports remains, then `tofu apply` and commit the state.
-
-Keep the `adopt` IDs after adoption. With them, a lost state is rebuilt by a single `tofu apply`.
+   Fix `terraform.tfvars` until nothing but imports remains, then `tofu apply`, delete `imports.tf` and commit the state.
 
 ## Everyday use
 
@@ -234,14 +237,10 @@ No modules.
 | account\_id | Cloudflare account ID. Set via TF\_VAR\_account\_id (it is an identifier, not a secret). | `string` | n/a | yes |
 | state\_passphrase | Passphrase that encrypts state and plan files (min. 16 characters). Set via TF\_VAR\_state\_passphrase; keep it in a password manager. | `string` | n/a | yes |
 | zone\_name | Apex domain of the site, e.g. example.com. CI sets it from the SITE\_DOMAIN repository variable via TF\_VAR\_zone\_name. | `string` | n/a | yes |
-| adopt | IDs of existing resources to import instead of creating. Leave empty ({}) for a fresh<br/>setup. When `zone_id` is set, every entry in `zone_settings` is imported too.<br/>Get the IDs with cf-terraforming or `cf` (see infra/README.md). | <pre>object({<br/>    zone_id               = optional(string)<br/>    dns_records           = optional(map(string), {}) # dns_records key => record ID<br/>    www_record_id         = optional(string)<br/>    redirect_ruleset_id   = optional(string)<br/>    web_analytics_site_id = optional(string)<br/>    waf_custom_ruleset_id = optional(string)<br/>  })</pre> | `{}` | no |
 | bot\_fight\_mode | Bot Fight Mode (Security → Settings). It cannot be skipped by WAF custom rules, so leave it<br/>off when custom rules exempt feeds and verified bots. Other bot settings are left as-is. | `bool` | `false` | no |
 | bot\_settings | Other bot settings to pin; null leaves a setting unmanaged. Values:<br/>ai\_bots\_protection "block" \| "disabled" \| "only\_on\_ad\_pages" (Block AI bots);<br/>crawler\_protection "enabled" \| "disabled" (AI Labyrinth);<br/>ai\_training: robots.txt policy for AI training crawlers (e.g. "disallow");<br/>enable\_js: invisible JavaScript detections. | <pre>object({<br/>    ai_bots_protection = optional(string)<br/>    crawler_protection = optional(string)<br/>    ai_training        = optional(string)<br/>    enable_js          = optional(bool)<br/>  })</pre> | `{}` | no |
 | dns\_records | DNS records to manage, keyed by a stable label of your choice. `name` is relative<br/>to the zone ("@" for the apex). Do not list the apex record for the site itself:<br/>the Worker custom domain (owned by Wrangler, `npm run deploy`) creates it. | <pre>map(object({<br/>    type     = string<br/>    name     = string<br/>    content  = string<br/>    ttl      = optional(number, 1) # 1 = automatic<br/>    proxied  = optional(bool, false)<br/>    priority = optional(number)<br/>    comment  = optional(string)<br/>  }))</pre> | `{}` | no |
-| redirect\_www\_to\_apex | Create a proxied placeholder `www` record and a zone redirect rule sending www.<zone> to the apex with a 301, keeping path and query string. | `bool` | `true` | no |
 | waf\_custom\_rules | WAF custom rules, evaluated in list order. Free plan: at most 5 rules.<br/>`skip_remaining_custom_rules` (ruleset "current"), `skip_phases`, `skip_products` and<br/>`logging` apply only when `action = "skip"`. | <pre>list(object({<br/>    description                 = string<br/>    expression                  = string<br/>    action                      = string<br/>    enabled                     = optional(bool, true)<br/>    logging                     = optional(bool, true)<br/>    skip_remaining_custom_rules = optional(bool, false)<br/>    skip_phases                 = optional(list(string))<br/>    skip_products               = optional(list(string))<br/>  }))</pre> | `[]` | no |
-| web\_analytics | Enable Cloudflare Web Analytics with automatic beacon injection for the zone. | `bool` | `true` | no |
-| web\_analytics\_exclude\_eu | Web Analytics "lite" mode: don't collect data from EU visitors. | `bool` | `false` | no |
 | zone\_settings | Zone settings to pin, as { setting\_id = value }, e.g. { ssl = "strict", min\_tls\_version = "1.2" }.<br/>List only settings that differ from Cloudflare's defaults. Setting IDs:<br/>https://developers.cloudflare.com/api/resources/zones/subresources/settings/ | `any` | `{}` | no |
 
 ## Outputs
@@ -249,6 +248,5 @@ No modules.
 | Name | Description |
 | ---- | ----------- |
 | name\_servers | Cloudflare nameservers to set at your registrar. |
-| web\_analytics\_site\_tag | Web Analytics site tag, or null when disabled. |
 | zone\_id | Zone ID. Export as CLOUDFLARE\_ZONE\_ID for `cf` commands. |
 <!-- END_TF_DOCS -->

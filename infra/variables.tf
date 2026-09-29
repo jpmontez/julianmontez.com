@@ -1,21 +1,11 @@
 variable "account_id" {
   description = "Cloudflare account ID. Set via TF_VAR_account_id (it is an identifier, not a secret)."
   type        = string
-
-  validation {
-    condition     = can(regex("^[0-9a-f]{32}$", var.account_id))
-    error_message = "account_id must be a 32-character hex Cloudflare account ID."
-  }
 }
 
 variable "zone_name" {
   description = "Apex domain of the site, e.g. example.com. CI sets it from the SITE_DOMAIN repository variable via TF_VAR_zone_name."
   type        = string
-
-  validation {
-    condition     = can(regex("^([a-z0-9-]+\\.)+[a-z]{2,}$", var.zone_name))
-    error_message = "zone_name must be a lowercase apex domain such as example.com."
-  }
 }
 
 variable "dns_records" {
@@ -34,16 +24,6 @@ variable "dns_records" {
     comment  = optional(string)
   }))
   default = {}
-
-  validation {
-    condition     = alltrue([for r in values(var.dns_records) : contains(["A", "AAAA", "CAA", "CNAME", "MX", "NS", "SRV", "TXT"], r.type)])
-    error_message = "dns_records[*].type must be one of A, AAAA, CAA, CNAME, MX, NS, SRV, TXT."
-  }
-
-  validation {
-    condition     = alltrue([for r in values(var.dns_records) : r.type != "MX" || r.priority != null])
-    error_message = "MX records need a priority."
-  }
 }
 
 variable "zone_settings" {
@@ -54,41 +34,6 @@ variable "zone_settings" {
   EOT
   type        = any
   default     = {}
-}
-
-variable "redirect_www_to_apex" {
-  description = "Create a proxied placeholder `www` record and a zone redirect rule sending www.<zone> to the apex with a 301, keeping path and query string."
-  type        = bool
-  default     = true
-}
-
-variable "web_analytics" {
-  description = "Enable Cloudflare Web Analytics with automatic beacon injection for the zone."
-  type        = bool
-  default     = true
-}
-
-variable "web_analytics_exclude_eu" {
-  description = "Web Analytics \"lite\" mode: don't collect data from EU visitors."
-  type        = bool
-  default     = false
-}
-
-variable "adopt" {
-  description = <<-EOT
-    IDs of existing resources to import instead of creating. Leave empty ({}) for a fresh
-    setup. When `zone_id` is set, every entry in `zone_settings` is imported too.
-    Get the IDs with cf-terraforming or `cf` (see infra/README.md).
-  EOT
-  type = object({
-    zone_id               = optional(string)
-    dns_records           = optional(map(string), {}) # dns_records key => record ID
-    www_record_id         = optional(string)
-    redirect_ruleset_id   = optional(string)
-    web_analytics_site_id = optional(string)
-    waf_custom_ruleset_id = optional(string)
-  })
-  default = {}
 }
 
 variable "state_passphrase" {
@@ -119,16 +64,6 @@ variable "waf_custom_rules" {
     skip_products               = optional(list(string))
   }))
   default = []
-
-  validation {
-    condition     = length(var.waf_custom_rules) <= 5
-    error_message = "The Free plan allows at most 5 WAF custom rules."
-  }
-
-  validation {
-    condition     = alltrue([for r in var.waf_custom_rules : contains(["block", "challenge", "js_challenge", "managed_challenge", "log", "skip"], r.action)])
-    error_message = "waf_custom_rules[*].action must be block, challenge, js_challenge, managed_challenge, log or skip."
-  }
 }
 
 variable "bot_fight_mode" {

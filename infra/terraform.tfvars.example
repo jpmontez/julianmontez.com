@@ -14,10 +14,6 @@ zone_settings = {
   min_tls_version  = "1.2"
 }
 
-redirect_www_to_apex     = true
-web_analytics            = true
-web_analytics_exclude_eu = false
-
 # WAF custom rules, in order (Free plan: max 5). See README.md › WAF custom rules.
 waf_custom_rules = [
   # {
@@ -35,14 +31,3 @@ waf_custom_rules = [
 
 # Bot Fight Mode can't be skipped by WAF custom rules; keep it off if you exempt feeds/bots.
 bot_fight_mode = false
-
-# Fresh setup: leave empty. Adopting an existing zone: see README.md.
-adopt = {}
-# adopt = {
-#   zone_id               = "<zone id>"
-#   dns_records           = { mx_1 = "<record id>", spf = "<record id>" }
-#   www_record_id         = "<record id>"
-#   redirect_ruleset_id   = "<ruleset id>"
-#   web_analytics_site_id = "<site tag>"
-#   waf_custom_ruleset_id = "<ruleset id>"
-# }
