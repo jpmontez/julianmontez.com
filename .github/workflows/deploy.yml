@@ -65,14 +65,19 @@ jobs:
       - name: Validate
         run: tofu validate
 
+      # Official release binary, pinned and checksum-verified. terraform-docs/gh-actions bundles
+      # an older terraform-docs whose output differs from the version used locally.
       - name: Docs in sync
-        uses: terraform-docs/gh-actions@v1.4.1
-        with:
-          working-dir: infra
-          config-file: .terraform-docs.yml
-          output-method: inject
-          fail-on-diff: true
-          git-push: false
+        env:
+          TFDOCS_VERSION: v0.24.0
+          TFDOCS_SHA256: 9005daf969de0b50134493a2c00078b49f5f5b39d021cda7c89bf4d4f3d776d3
+        run: |
+          tarball="terraform-docs-${TFDOCS_VERSION}-linux-amd64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$tarball" "https://github.com/terraform-docs/terraform-docs/releases/download/${TFDOCS_VERSION}/${tarball}"
+          echo "${TFDOCS_SHA256}  $RUNNER_TEMP/$tarball" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP" terraform-docs
+          "$RUNNER_TEMP/terraform-docs" .
+          git diff --exit-code -- README.md || { echo "::error::infra/README.md is stale. Run terraform-docs . in infra/ and commit."; exit 1; }
 
       - name: Plan (drift check)
         if: env.HAS_READ_TOKEN == 'true'
