@@ -1,0 +1,10 @@
+---
+// Served with a 404 status for unknown URLs (wrangler.jsonc: not_found_handling "404-page").
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfig } from '../config';
+---
+
+<BaseLayout pageTitle={`Not found · ${siteConfig.title}`}>
+  <meta slot="head" name="robots" content="noindex" />
+  <p class="feed-nav">Page not found. <a href="/">Back to the photos</a></p>
+</BaseLayout>

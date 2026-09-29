@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: package.json
           cache: npm
 
       - name: Install dependencies
@@ -34,28 +34,89 @@ jobs:
       - name: Build site
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v6
+  infra:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TF_READ_TOKEN }}
+      TF_VAR_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TF_VAR_zone_name: ${{ vars.SITE_DOMAIN }}
+      # The placeholder only lets `validate` run on forks without secrets; `plan` is skipped there.
+      TF_VAR_state_passphrase: ${{ secrets.TF_VAR_STATE_PASSPHRASE || 'validate-only-placeholder-passphrase' }}
+      HAS_READ_TOKEN: ${{ secrets.CLOUDFLARE_TF_READ_TOKEN != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v2
         with:
-          name: dist
-          path: dist/
-          retention-days: 1
+          tofu_version: 1.12.6
+          tofu_wrapper: false
+
+      - name: Format
+        run: tofu fmt -check -recursive
+
+      - name: Init
+        run: tofu init -input=false
+
+      - name: Validate
+        run: tofu validate
+
+      # Official release binary, pinned and checksum-verified. terraform-docs/gh-actions bundles
+      # an older terraform-docs whose output differs from the version used locally.
+      - name: Docs in sync
+        env:
+          TFDOCS_VERSION: v0.24.0
+          TFDOCS_SHA256: 9005daf969de0b50134493a2c00078b49f5f5b39d021cda7c89bf4d4f3d776d3
+        run: |
+          tarball="terraform-docs-${TFDOCS_VERSION}-linux-amd64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$tarball" "https://github.com/terraform-docs/terraform-docs/releases/download/${TFDOCS_VERSION}/${tarball}"
+          echo "${TFDOCS_SHA256}  $RUNNER_TEMP/$tarball" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP" terraform-docs
+          "$RUNNER_TEMP/terraform-docs" .
+          git diff --exit-code -- README.md || { echo "::error::infra/README.md is stale. Run terraform-docs . in infra/ and commit."; exit 1; }
+
+      - name: Plan (drift check)
+        if: env.HAS_READ_TOKEN == 'true'
+        run: |
+          set +e
+          tofu plan -input=false -lock=false -detailed-exitcode
+          rc=$?
+          if [ "$rc" -eq 2 ]; then
+            echo "::error::Live Cloudflare config differs from infra/. Apply the change locally (tofu apply) or fix the drift."
+          fi
+          exit "$rc"
 
   deploy:
+    # Only validate gates content deploys; zone drift (infra) must not block publishing a post.
     needs: validate
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    environment: cloudflare-pages
+    environment: production
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: dist
-          path: dist/
+      - name: Checkout
+        uses: actions/checkout@v6
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          node-version-file: package.json
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site
+        run: npm run build
+
+      # Wrangler, not `cf deploy`, until cloudflare/cf#18 is fixed
+      - name: Deploy to Cloudflare Workers
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_NAME: ${{ vars.WORKER_NAME }}
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}

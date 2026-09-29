@@ -14,3 +14,14 @@ _refs/
 
 # Claude Code
 .claude/settings.local.json
+
+# OpenTofu
+.terraform/
+*.tfplan
+
+# Local environment
+.env
+
+# Wrangler local state
+.wrangler/
+*.tfstate.backup

@@ -21,6 +21,13 @@ const {
 } = Astro.props;
 
 const currentYear = new Date().getFullYear();
+
+// Cloudflare Email Obfuscation doesn't apply to Worker responses, so the address ships
+// XOR-encoded and the inline script below turns it into a mailto: link in the browser.
+const emailKey = 0x5a;
+const encodedEmail = Array.from(siteConfig.email, (c) =>
+  (c.charCodeAt(0) ^ emailKey).toString(16).padStart(2, '0')
+).join('');
 ---
 
 <!doctype html>
@@ -65,7 +72,7 @@ const currentYear = new Date().getFullYear();
         <span class="tagline">
           {siteConfig.tagline}
           <span aria-hidden="true"> · </span>
-          <a href={`mailto:${siteConfig.email}`}>Email</a>
+          <a data-email={encodedEmail}>Email</a>
         </span>
       </header>
       <main id="main">
@@ -77,5 +84,10 @@ const currentYear = new Date().getFullYear();
         &copy; {currentYear}
       </footer>
     </div>
+    <script is:inline define:vars={{ emailKey }}>
+      for (const a of document.querySelectorAll('a[data-email]')) {
+        a.href = 'mailto:' + a.dataset.email.replace(/../g, (h) => String.fromCharCode(parseInt(h, 16) ^ emailKey));
+      }
+    </script>
   </body>
 </html>

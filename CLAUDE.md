@@ -12,21 +12,28 @@ After completing work: update `TODO.md` (mark done, add new). Only update `READM
 
 ## Commands
 
+Node 24 LTS only (`engines.node` + `engine-strict=true` in `.npmrc`); locally use Homebrew `node@24`. No global npm installs; run tools with `npx`.
+
 ```bash
 # Install dependencies
 npm install
 
-# Build
+# Build (static output in dist/)
 npx astro build
 
-# Preview (build + serve at http://localhost:4321)
+# Preview (dev server at http://localhost:4321)
 npx astro dev
 
 # Type check
 npx astro check
 
-# Serve built output
-npx serve dist
+# Deploy dist/ to Cloudflare Workers via wrangler (build first; needs .env loaded: set -a; source .env; set +a)
+npm run deploy
+
+# Cloudflare zone infrastructure (from infra/)
+tofu fmt -recursive && tofu validate
+tofu plan -out=change.tfplan && tofu apply change.tfplan
+terraform-docs .        # refresh the generated section of infra/README.md
 ```
 
 ## Architecture
@@ -34,6 +41,9 @@ npx serve dist
 This is an **Astro static site** — a photo-centric microblog. The build pipeline:
 
 ```
+astro.config.mjs        → Astro config (plain static output in dist/)
+wrangler.jsonc          → assets-only Worker config (dist/, trailing slashes, 404 page); name/domain passed as deploy flags from WORKER_NAME/SITE_DOMAIN
+infra/                  → OpenTofu config for the Cloudflare zone (see infra/README.md)
 src/content.config.ts   → content collection schema (Zod) for posts
 src/content/posts/      → Markdown posts with YAML front matter
 src/assets/photos/      → full-resolution source images (processed at build time)
@@ -46,6 +56,7 @@ src/components/
   PostImage.astro       → responsive <picture> with AVIF/WebP/native srcset
   Slideshow.astro       → multi-image horizontal slideshow with JS nav
 src/pages/
+  404.astro             → not-found page (assets notFoundHandling: 404-page)
   index.astro           → paginated feed (page 1)
   page/[page].astro     → paginated feed (pages 2+)
   [...slug].astro       → individual post pages at /YYYY/MM/slug/
@@ -62,8 +73,9 @@ src/styles/
 - The feed's LCP preload is AVIF-only and uses `imageSrcsets()` so its URLs match `PostImage` exactly
 - `src/config.ts` controls title, tagline, pagination, image sizes
 - Only the feed's first image loads eagerly. Extra eager images download alongside the LCP image on Lighthouse's throttled mobile profile and cost LCP points (1.8s → 1.1s when removed)
-- The header `mailto:` link is intentionally left to Cloudflare Email Obfuscation (spam protection), which injects `email-decode.min.js`; don't wrap it in `<!--email_off-->`
+- The header email link ships XOR-encoded (`data-email`) and a tiny inline script in `BaseLayout.astro` builds the `mailto:` in the browser. Cloudflare Email Obfuscation doesn't apply to Worker responses, so never render the address as plain text anywhere in the HTML
 - Images in `src/assets/photos/` are processed by Astro's sharp pipeline at build time
+- Deploys use Wrangler, not `cf`, until [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed. Don't add `@astrojs/cloudflare`: it moves output to `dist/client/` and adds a Worker script plus session KV and Images binding defaults this static site doesn't need
 
 **View transitions & slideshow patterns (`src/styles/theme.css`, `src/components/Slideshow.astro`):**
 - Cross-document view transitions enabled via `@view-transition { navigation: auto }` (CSS only)
@@ -93,5 +105,12 @@ Markdown body.
 ## Deployment
 
 Push to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml`:
-- `validate` job: `npm ci` + `astro check` + `astro build`
-- `deploy` job: deploys `dist/` to Cloudflare Pages (non-PR events only)
+- `validate` job: `npm ci` + `npm run build` (`astro check` + `astro build`)
+- `infra` job (PRs and pushes): `tofu fmt -check`, `tofu validate`, terraform-docs check, `tofu plan -detailed-exitcode` as a drift check. **CI never runs `tofu apply`**; apply locally and commit the encrypted `infra/terraform.tfstate`.
+- `deploy` job (non-PR only, needs `validate` only): `npm run deploy` → `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`: an assets-only Worker (no script) serving `dist/` per `wrangler.jsonc`
+
+Ownership split — never manage a resource from both tools:
+- Wrangler / `wrangler.jsonc` + deploy flags: the Worker, its assets, its custom domain and the DNS record Cloudflare creates for it
+- `cf` (local devDependency) is for inspection/admin only (`npx cf dns records export`, `npx cf zones settings get …`)
+- OpenTofu / `infra/`: zone, all other DNS records, zone settings, www→apex redirect rule, Web Analytics
+- No personal values in `infra/*.tf` or `wrangler.jsonc`; site-specific data lives only in `infra/terraform.tfvars`, GitHub repo variables/secrets, and `.env` (gitignored)

@@ -2,3 +2,22 @@
 
 - Keep monitoring mobile LCP as new content lands; a large first photo is the main risk to the 100 score (local Lighthouse mobile LCP 1.1s, 100 needs < ~1.55s).
 - Optional: disable Cloudflare Web Analytics if unused; its `beacon.min.js` is the only remaining "legacy JavaScript" / short-cache flag in PageSpeed Insights.
+
+## Cloudflare `cf` + IaC migration (branch `feat/cf-iac`)
+
+Finish the cutover:
+- Confirm the `validate` and `infra` jobs pass on the `feat/cf-iac` PR, merge, and confirm the first CI `deploy` on `main` succeeds.
+- Watch Security → Events for WAF false positives (feed readers, link previews, monitors, your own VPN) and tune `waf_custom_rules`.
+
+Credentials:
+- 1Password (Personal vault), at the end of this migration: review and improve the six items suffixed `— julianmontez.com` using the 1Password CLI (`op item get/edit`, never printing secret values): `CLOUDFLARE_TF_READ_TOKEN`, `CLOUDFLARE_DEPLOY_TOKEN`, `CLOUDFLARE_TF_APPLY_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `TF_VAR_state_passphrase` and `Cloudflare API Token`. For each: a clear title, what it's for, the Cloudflare token name and exact permissions (README › Credentials setup), where it's stored (GitHub secret/environment name, `.env` variable), rotation guidance, and links to the Cloudflare API Tokens page and the repo's GitHub settings. `Cloudflare API Token` is likely the old Pages deploy token: confirm, then revoke it in Cloudflare and archive the item after cutover.
+
+Accessibility:
+- Fix Lighthouse's "Links rely on color to be distinguishable" (axe `link-in-text-block`, accessibility 92) for the header "Email" link: `header.site .tagline a` removes the underline, so the link differs from the surrounding tagline text only by color. Give it a non-color cue (e.g. underline) and re-run Lighthouse.
+
+Follow-ups:
+- Move to Node 26 once it enters LTS: update `engines.node` in `package.json`.
+- Unpin `cf` from `1.0.0-beta.5` when it reaches GA.
+- Switch deploys from `wrangler deploy` to `cf deploy` once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed (fallback to the Wrangler assets path for detected frameworks); then replace `wrangler.jsonc` via `npx cf migrate` and re-run `cf deploy --dry-run`.
+- Move zone config (DNS, settings) into `cf`'s declarative config once it supports zones; drop the matching `infra/` resources.
+- Run `npx cf auth logout` to revoke the broad (469-scope) OAuth login used during research.
