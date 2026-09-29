@@ -1,0 +1,15 @@
+// Worker for the static site. Site identity (Worker name, custom domain) is passed
+// by `npm run deploy` from the WORKER_NAME / SITE_DOMAIN env vars, so this file
+// carries no personal values.
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2026-09-26",
+	// Serve only on the custom domain: no *.workers.dev hostname, no per-version preview URLs
+	"workers_dev": false,
+	"preview_urls": false,
+	"assets": {
+		"directory": "./dist",
+		"html_handling": "auto-trailing-slash",
+		"not_found_handling": "404-page"
+	}
+}

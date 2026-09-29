@@ -1,0 +1,9 @@
+formatter: markdown table
+output:
+  file: README.md
+  mode: inject
+sort:
+  by: required
+settings:
+  anchor: false
+  lockfile: false

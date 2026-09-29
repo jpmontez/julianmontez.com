@@ -1,0 +1,48 @@
+# Copy to terraform.tfvars and edit. Set these as environment variables instead:
+#   TF_VAR_account_id, TF_VAR_zone_name, TF_VAR_state_passphrase, CLOUDFLARE_API_TOKEN
+
+# Records other than the site itself; `name` is relative to the zone ("@" = apex).
+dns_records = {
+  mx_1 = { type = "MX", name = "@", content = "mx1.mail.example.net", priority = 10 }
+  spf  = { type = "TXT", name = "@", content = "\"v=spf1 include:mail.example.net ~all\"" }
+}
+
+# Only settings that differ from Cloudflare defaults.
+zone_settings = {
+  ssl              = "strict"
+  always_use_https = "on"
+  min_tls_version  = "1.2"
+}
+
+redirect_www_to_apex     = true
+web_analytics            = true
+web_analytics_exclude_eu = false
+
+# WAF custom rules, in order (Free plan: max 5). See README.md › WAF custom rules.
+waf_custom_rules = [
+  # {
+  #   description                 = "Allow verified bots and feeds"
+  #   action                      = "skip"
+  #   skip_remaining_custom_rules = true
+  #   expression                  = "(cf.client.bot) or (http.request.uri.path in {\"/feed.xml\" \"/robots.txt\"})"
+  # },
+  # {
+  #   description = "Challenge automation user agents"
+  #   action      = "managed_challenge"
+  #   expression  = "(lower(http.user_agent) contains \"bot\") or (http.user_agent eq \"\")"
+  # },
+]
+
+# Bot Fight Mode can't be skipped by WAF custom rules; keep it off if you exempt feeds/bots.
+bot_fight_mode = false
+
+# Fresh setup: leave empty. Adopting an existing zone: see README.md.
+adopt = {}
+# adopt = {
+#   zone_id               = "<zone id>"
+#   dns_records           = { mx_1 = "<record id>", spf = "<record id>" }
+#   www_record_id         = "<record id>"
+#   redirect_ruleset_id   = "<ruleset id>"
+#   web_analytics_site_id = "<site tag>"
+#   waf_custom_ruleset_id = "<ruleset id>"
+# }
