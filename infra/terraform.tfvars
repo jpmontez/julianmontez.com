@@ -28,10 +28,6 @@ zone_settings = {
   ssl              = "strict"
 }
 
-redirect_www_to_apex     = true
-web_analytics            = true
-web_analytics_exclude_eu = true
-
 # WAF custom rules (Security → Security rules), evaluated in order.
 # Rationale: infra/README.md › WAF custom rules.
 waf_custom_rules = [
@@ -82,23 +78,4 @@ bot_settings = {
   crawler_protection = "enabled"
   ai_training        = "disallow"
   enable_js          = true
-}
-
-# Existing resources to import (IDs from cf-terraforming / the Cloudflare API).
-adopt = {
-  zone_id = "5b0415cdb7b927055198abe37d3b1afe"
-  dns_records = {
-    dkim_fm1                 = "bd15a094e9d04f83555f1f70b718428b"
-    dkim_fm2                 = "256fce2e1cb76a059a50682eef190356"
-    dkim_fm3                 = "7b007e7895db9fb79bfe389f7405cf5f"
-    mx_1                     = "91ae9655d3d3a1e870936e410d286623"
-    mx_2                     = "5fc055ed033ef7621ce49e307ba28d79"
-    spf                      = "8d888166f384f8b419b9126d0db263ce"
-    github_pages_proof       = "58f7b9c592eaf919ee819660b91335ec"
-    google_site_verification = "c7642221f4f207b0e419b596782f517e"
-  }
-  www_record_id         = "9c0782ed9eb083537ee94fc9e8794397"
-  redirect_ruleset_id   = "af6bc3d7ab784ab89b36bac845d30362"
-  web_analytics_site_id = "1101079dbc614be09716f65f2664ad1c"
-  waf_custom_ruleset_id = "8deac5f1a1124836baa336cbc88a6621"
 }

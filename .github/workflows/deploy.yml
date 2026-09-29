@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   validate:
+    # On pushes, deploy runs the same build, so building here too would only repeat it.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -91,8 +93,7 @@ jobs:
           exit "$rc"
 
   deploy:
-    # Only validate gates content deploys; zone drift (infra) must not block publishing a post.
-    needs: validate
+    # Independent of infra: zone drift must not block publishing a post.
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production

@@ -5,7 +5,7 @@ Static photoblog built with [Astro](https://astro.build). Deployed to Cloudflare
 ## Requirements
 
 - **Node.js 24 LTS.** Pinned once in `package.json` (`engines.node`), and `.npmrc` sets `engine-strict=true`, so `npm install` fails on any other major. CI reads the same pin. On macOS: `brew install node@24` and put `/opt/homebrew/opt/node@24/bin` first on your `PATH`.
-- **No global npm packages.** Every tool, including `cf`, is a pinned devDependency; run it with `npx cf …` or an npm script.
+- **No global npm packages.** Build and deploy tools are pinned devDependencies run through npm scripts or `npx`. `cf` (inspection only) isn't installed; `npx cf …` fetches it on demand.
 - **Infrastructure tools** (only to change the Cloudflare setup): `brew install opentofu terraform-docs` and, to adopt an existing zone, `brew install cloudflare/cloudflare/cf-terraforming`.
 
 ## Quick Start
@@ -77,7 +77,7 @@ Imports files matching `YYYYMMDD-DSC_NNNN.jpg` (default source: `~/Desktop`), co
 
 How it fits together:
 
-- **Site:** `npm run deploy` runs `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`, uploading the static `dist/` to an assets-only Worker (no script, so no invocations to count) and attaching the custom domain. `wrangler.jsonc` sets trailing-slash handling and serves `404.html` for unknown URLs. `cf` is installed locally for inspection and admin; it will take over deploys once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) (Astro projects can't `cf deploy`) is fixed.
+- **Site:** `npm run deploy` runs `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`, uploading the static `dist/` to an assets-only Worker (no script, so no invocations to count) and attaching the custom domain. `wrangler.jsonc` sets trailing-slash handling and serves `404.html` for unknown URLs. `cf` (run on demand with `npx cf …`) is for inspection and admin; it will take over deploys once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) (Astro projects can't `cf deploy`) is fixed.
 - **Everything else on the zone:** DNS, zone settings, the www→apex redirect, WAF custom rules, Bot Fight Mode and Web Analytics are OpenTofu in [`infra/`](infra/README.md). `tofu apply` is run locally; CI only checks for drift.
 
 Each resource has one owner: Wrangler owns the Worker, its assets, its custom domain and the DNS record that domain creates; OpenTofu owns the rest.
@@ -88,7 +88,7 @@ Each resource has one owner: Wrangler owns the Worker, its assets, its custom do
 cp .env.example .env         # fill in the values
 set -a; source .env; set +a
 npm run build && npm run deploy
-npx cf auth whoami           # any other cf command, from the local install
+npx cf auth whoami           # any other cf command, fetched on demand
 ```
 
 ### Deploy your own
@@ -106,9 +106,9 @@ GitHub Actions (`.github/workflows/deploy.yml`):
 
 | Job | Runs on | Does |
 |---|---|---|
-| `validate` | PRs and pushes | `npm ci`, `astro check`, `astro build` |
+| `validate` | PRs | `npm ci`, `astro check`, `astro build` |
 | `infra` | PRs and pushes | `tofu fmt -check`, `tofu validate`, terraform-docs sync check, `tofu plan -detailed-exitcode` (fails on drift; skipped when the read token isn't set, e.g. on a fresh fork). Never applies |
-| `deploy` | pushes to `main` | `npm ci`, `npm run build`, `npm run deploy` (`wrangler deploy`). Needs only `validate`, so zone drift never blocks a new post |
+| `deploy` | pushes to `main` | `npm ci`, `npm run build` (includes `astro check`), `npm run deploy` (`wrangler deploy`). Independent of `infra`, so zone drift never blocks a new post |
 
 ### Credentials setup
 
