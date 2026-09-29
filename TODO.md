@@ -5,11 +5,8 @@
 
 ## Cloudflare `cf` + IaC migration (branch `feat/cf-iac`)
 
-Finish the cutover (dashboard; the site already runs on the Worker):
-- Remove the account-level Bulk Redirect: Manage account → Bulk Redirects → delete the rule, then delete the `redirect_www_to_domain_apex` list. The zone redirect rule in `infra/` already handles www→apex.
-- GitHub: delete the `cloudflare-pages` environment and its secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`).
-- Push `feat/cf-iac`, open a PR, confirm the `validate` and `infra` jobs pass, merge.
-- Confirm the Web Analytics beacon still loads in a browser (curl can't see it) and data arrives in Analytics → Web analytics.
+Finish the cutover:
+- Confirm the `validate` and `infra` jobs pass on the `feat/cf-iac` PR, merge, and confirm the first CI `deploy` on `main` succeeds.
 - Watch Security → Events for WAF false positives (feed readers, link previews, monitors, your own VPN) and tune `waf_custom_rules`.
 
 Credentials:
