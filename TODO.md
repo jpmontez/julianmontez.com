@@ -7,7 +7,6 @@
 
 Finish the cutover (dashboard; the site already runs on the Worker):
 - Remove the account-level Bulk Redirect: Manage account → Bulk Redirects → delete the rule, then delete the `redirect_www_to_domain_apex` list. The zone redirect rule in `infra/` already handles www→apex.
-- Pages project `julianmontez-com`: disconnect its GitHub integration now; delete the project once the Worker has run for a while without issues. Rollback until then: detach the domain from the Worker, re-add it to Pages.
 - GitHub: delete the `cloudflare-pages` environment and its secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PROJECT_NAME`).
 - Push `feat/cf-iac`, open a PR, confirm the `validate` and `infra` jobs pass, merge.
 - Confirm the Web Analytics beacon still loads in a browser (curl can't see it) and data arrives in Analytics → Web analytics.
