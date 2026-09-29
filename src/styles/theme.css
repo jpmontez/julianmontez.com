@@ -98,15 +98,6 @@ header.site .tagline {
   color: var(--muted);
 }
 
-header.site .tagline a {
-  text-decoration: none;
-}
-
-header.site .tagline a:hover {
-  color: inherit;
-  text-decoration: underline;
-}
-
 .image-stack {
   max-width: 520px;
   margin: 0 auto 18px;
