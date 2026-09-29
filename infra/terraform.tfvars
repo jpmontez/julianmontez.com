@@ -25,7 +25,7 @@ zone_settings = {
   challenge_ttl    = 3600
   ipv6             = "on"
   rocket_loader    = "off"
-  ssl              = "flexible" # TODO: move to "strict" (Full (strict)) at cutover; see TODO.md
+  ssl              = "strict"
 }
 
 redirect_www_to_apex     = true

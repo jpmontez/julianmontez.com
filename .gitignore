@@ -24,3 +24,4 @@ _refs/
 
 # Wrangler local state
 .wrangler/
+*.tfstate.backup
