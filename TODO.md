@@ -3,6 +3,12 @@
 - Keep monitoring mobile LCP as new content lands; a large first photo is the main risk to the 100 score (local Lighthouse mobile LCP 1.1s, 100 needs < ~1.55s).
 - Optional: drop Cloudflare Web Analytics if unused (delete `infra/analytics.tf`); its `beacon.min.js` is the only remaining "legacy JavaScript" / short-cache flag in PageSpeed Insights.
 
+## SEO
+
+- Link back to the site from the Instagram and GitHub profiles listed in `sameAs` (`src/config.ts`).
+- Search Console: submit `sitemap-index.xml`; check Pages → "Crawled – currently not indexed". Import the site into Bing Webmaster Tools.
+- After deploy, run Google's Rich Results Test on a post URL and the homepage.
+
 ## Cloudflare
 
 Monitoring:

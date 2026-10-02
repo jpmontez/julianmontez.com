@@ -5,7 +5,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PostImage from '../components/PostImage.astro';
 import Slideshow from '../components/Slideshow.astro';
 import { siteConfig } from '../config';
-import { displayDate, postSlug } from '../utils';
+import { dateline, displayDate, imageSrcsets, postSlug } from '../utils';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
@@ -13,15 +13,27 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { date, title, images } = post.data;
+const { date, title, location, images } = post.data;
 const { Content } = await render(post);
 
 const isoDate = date.toISOString().slice(0, 10);
-const headline = title || displayDate(date);
+const headline = title || dateline(post.data);
 const pageTitle = `${headline} — ${siteConfig.title}`;
-const pageDescription = title || siteConfig.description;
+// The title already fills <title>; alt text is never rendered visibly, so it gives each post a unique description
+const pageDescription = location ? `${location}. ${images[0].alt}` : images[0].alt;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 const ogImage = await getImage({ src: images[0].src, width: 1080, format: 'jpg' });
+// Photographer credit for image search. The build strips EXIF/IPTC from the files, so it's declared here.
+// contentUrl is each <img>'s fallback src, the URL search engines index.
+const author = { '@type': 'Person', name: siteConfig.author, url: Astro.site!.href };
+const imageObjects = await Promise.all(
+  images.map(async (img) => ({
+    '@type': 'ImageObject',
+    contentUrl: new URL((await imageSrcsets(img.src)).fallback, Astro.site).href,
+    creator: author,
+    copyrightNotice: `© ${date.getUTCFullYear()} ${siteConfig.author}`,
+  }))
+);
 ---
 
 <BaseLayout
@@ -37,10 +49,12 @@ const ogImage = await getImage({ src: images[0].src, width: 1080, format: 'jpg' 
     type="application/ld+json"
     set:html={JSON.stringify({
       '@context': 'https://schema.org',
-      '@type': 'Article',
+      '@type': 'BlogPosting',
       headline,
+      image: imageObjects,
       datePublished: isoDate,
-      author: { '@type': 'Person', name: siteConfig.author },
+      ...(location && { contentLocation: { '@type': 'Place', name: location } }),
+      author,
       description: pageDescription,
       mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
     })}
@@ -60,6 +74,7 @@ const ogImage = await getImage({ src: images[0].src, width: 1080, format: 'jpg' 
     )}
 
     <p class="meta">
+      {location && <span class="location">{location}</span>}
       <time datetime={isoDate}>{displayDate(date)}</time>
     </p>
   </article>
