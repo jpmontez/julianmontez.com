@@ -19,7 +19,7 @@ const rendered = await Promise.all(
 
 // Preload the first post's first image (LCP candidate)
 const { avif: preloadSrcset } = await imageSrcsets(posts[0].data.images[0].src);
-const pageTitle = pageNum === 1 ? siteConfig.title : `Page ${pageNum} — ${siteConfig.title}`;
+const pageTitle = pageNum === 1 ? siteConfig.homeTitle : `Page ${pageNum} — ${siteConfig.title}`;
 ---
 
 <BaseLayout pageTitle={pageTitle} preloadSrcset={preloadSrcset}>
@@ -47,6 +47,7 @@ const pageTitle = pageNum === 1 ? siteConfig.title : `Page ${pageNum} — ${site
         )}
 
         <div class="meta">
+          {post.data.location && <span class="location">{post.data.location}</span>}
           <a href={postUrl}>
             <time datetime={post.data.date.toISOString().slice(0, 10)}>{displayDate(post.data.date)}</time>
           </a>

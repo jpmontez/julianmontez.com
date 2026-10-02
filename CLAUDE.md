@@ -90,6 +90,7 @@ Posts live at `src/content/posts/YYYY-MM-DD-slug.md` with YAML front matter:
 ---
 date: 2024-10-12
 title: "Optional title"
+location: "Optional place, e.g. Crown Heights North"
 images:
   - src: ../../assets/photos/2024-10-12-photo.jpg
     alt: "Alt text."
@@ -101,6 +102,7 @@ Markdown body.
 - Image `src` paths are relative from `src/content/posts/` to `src/assets/photos/`
 - At least one image is required
 - `title` is optional and intentionally not rendered on the page
+- `location` is optional; it's shown on its own line above the date (and as `Crown Heights North | 16 May 2026` in `<title>` and RSS) and leads the meta description. Use a neighbourhood, never exact coordinates
 
 ## Deployment
 

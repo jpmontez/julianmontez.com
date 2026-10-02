@@ -55,6 +55,7 @@ Create a Markdown file in `src/content/posts/`, for example `2024-10-12-my-post.
 ```markdown
 ---
 date: 2024-10-12
+location: Crown Heights North   # optional; shown above the date
 images:
   - src: ../../assets/photos/2024-10-12-photo.jpg
     alt: "Describe the photo."

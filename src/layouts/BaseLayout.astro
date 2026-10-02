@@ -20,6 +20,9 @@ const {
   preloadSrcset,
 } = Astro.props;
 
+const isHome = Astro.url.pathname === '/';
+const TitleTag = isHome ? 'h1' : 'span';
+
 const currentYear = new Date().getFullYear();
 
 // Cloudflare Email Obfuscation doesn't apply to Worker responses, so the address ships
@@ -37,6 +40,8 @@ const encodedEmail = Array.from(siteConfig.email, (c) =>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
+    {/* Lets search show large photo previews (image results, Discover) instead of thumbnails */}
+    <meta name="robots" content="max-image-preview:large" />
     <link rel="canonical" href={canonicalUrl} />
     <meta property="og:site_name" content={siteConfig.title} />
     <meta property="og:title" content={pageTitle} />
@@ -62,13 +67,26 @@ const encodedEmail = Array.from(siteConfig.email, (c) =>
         imagesizes={siteConfig.imageSizes}
       />
     )}
+    {isHome && (
+      <script
+        is:inline
+        type="application/ld+json"
+        set:html={JSON.stringify({
+          '@context': 'https://schema.org',
+          '@graph': [
+            { '@type': 'WebSite', name: siteConfig.title, url: Astro.site!.href, description: siteConfig.description },
+            { '@type': 'Person', name: siteConfig.author, url: Astro.site!.href, sameAs: siteConfig.sameAs },
+          ],
+        })}
+      />
+    )}
     <slot name="head" />
   </head>
   <body>
     <a href="#main" class="skip-link">Skip to content</a>
     <div class="page">
       <header class="site">
-        <span class="title"><a href="/">{siteConfig.title}</a></span>
+        <TitleTag class="title"><a href="/">{siteConfig.title}</a></TitleTag>
         <span class="tagline">
           {siteConfig.tagline}
           <span aria-hidden="true"> · </span>

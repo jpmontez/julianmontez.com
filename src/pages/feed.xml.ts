@@ -1,7 +1,7 @@
 import rss from '@astrojs/rss';
 import type { APIContext } from 'astro';
 import { siteConfig } from '../config';
-import { displayDate, getPosts, postSlug } from '../utils';
+import { dateline, getPosts, postSlug } from '../utils';
 
 export async function GET(context: APIContext) {
   const posts = (await getPosts()).slice(0, siteConfig.feedMaxPosts);
@@ -11,7 +11,7 @@ export async function GET(context: APIContext) {
     description: siteConfig.description,
     site: context.site!,
     items: posts.map((post) => ({
-      title: post.data.title || displayDate(post.data.date),
+      title: post.data.title || dateline(post.data),
       pubDate: post.data.date,
       link: `/${postSlug(post)}/`,
       description: post.data.title || '',

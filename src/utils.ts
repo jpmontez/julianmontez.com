@@ -25,6 +25,11 @@ export function displayDate(date: Date) {
   });
 }
 
+// "Crown Heights North | 21 Feb 2026", or just the date without a location
+export function dateline({ location, date }: CollectionEntry<'posts'>['data']) {
+  return location ? `${location} | ${displayDate(date)}` : displayDate(date);
+}
+
 // Widths are derived from the max CSS display size (520px, see config.ts imageSizes):
 //   520px = 1× desktop exact match
 //   660px = 1.75× mobile (Lighthouse's Moto G Power: (412px - 36px padding) × 1.75 DPR ≈ 658px)
