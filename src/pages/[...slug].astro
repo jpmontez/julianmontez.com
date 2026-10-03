@@ -31,6 +31,7 @@ const imageObjects = await Promise.all(
     '@type': 'ImageObject',
     contentUrl: new URL((await imageSrcsets(img.src)).fallback, Astro.site).href,
     creator: author,
+    creditText: siteConfig.author,
     copyrightNotice: `© ${date.getUTCFullYear()} ${siteConfig.author}`,
   }))
 );
