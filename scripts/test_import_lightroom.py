@@ -19,11 +19,13 @@ with tempfile.TemporaryDirectory() as tmp:
     source, il.PHOTOS_DIR, il.POSTS_DIR = tmp / "source", tmp / "photos", tmp / "posts"
     for directory in (source, il.PHOTOS_DIR, il.POSTS_DIR):
         directory.mkdir()
-    for name in ("20260516-DSC_0411.JPG", "20261340-DSC_0001.jpg", "notes.txt", "IMG_1.jpg"):
+    for name in ("20260516-DSC_0411.JPG", "20150904-dscf5519-Edit.jpg", "20261340-DSC_0001.jpg", "notes.txt", "IMG_1.jpg"):
         (source / name).write_bytes(b"jpg")
 
-    # parse_candidates: uppercase extension matches, bad date and non-Lightroom names are skipped.
-    [photo] = il.parse_candidates(source)
+    # parse_candidates: uppercase extension, Fujifilm DSCF names and the -Edit suffix match (frame uppercased, suffix dropped),
+    # bad date and non-Lightroom names are skipped.
+    fuji, photo = il.parse_candidates(source)
+    assert fuji.destination == il.PHOTOS_DIR / "2015-09-04-DSCF5519.jpg"
     assert photo.date == dt.date(2026, 5, 16)
     assert photo.destination == il.PHOTOS_DIR / "2026-05-16-DSC_0411.jpg"
 
@@ -39,7 +41,7 @@ with tempfile.TemporaryDirectory() as tmp:
     alt = 'He said "hi": café at 5:30'
     il.alt_text = lambda photo: alt
     post = tmp / "post.md"
-    il.write_post(post, photo.date, [photo])
+    il.write_post(post, photo)
     lines = post.read_text(encoding="utf-8").splitlines()
     assert lines[:4] == ["---", "date: 2026-05-16", "images:", '  - src: "../../assets/photos/2026-05-16-DSC_0411.jpg"']
     assert lines[4].startswith("    alt: ") and json.loads(lines[4].removeprefix("    alt: ")) == alt
@@ -50,7 +52,7 @@ with tempfile.TemporaryDirectory() as tmp:
         raise RuntimeError("no claude")
 
     il.alt_text = fail
-    il.write_post(post, photo.date, [photo])
+    il.write_post(post, photo)
     text = post.read_text(encoding="utf-8")
     assert "alt:" not in text and text.endswith("2026-05-16-DSC_0411.jpg\"\n---\n")
 

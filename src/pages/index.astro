@@ -1,13 +1,6 @@
 ---
-import Feed from '../components/Feed.astro';
-import { siteConfig } from '../config';
+import PhotoPage from '../components/PhotoPage.astro';
 import { getPosts } from '../utils';
-
-const posts = await getPosts();
 ---
 
-<Feed
-  posts={posts.slice(0, siteConfig.postsPerPage)}
-  pageNum={1}
-  totalPages={Math.ceil(posts.length / siteConfig.postsPerPage)}
-/>
+<PhotoPage posts={await getPosts()} index={0} />

@@ -9,6 +9,13 @@ interface Props {
   ogType?: string;
   ogImageUrl?: string;
   preloadSrcset?: string;
+  preloadSizes?: string;
+  // Marks the matching header link with aria-current="page"
+  current?: 'index';
+  // Template class on the page wrapper: "photo-page" or "index-page"
+  pageClass?: string;
+  // Centre header slot that names the photo's top-third click zone while it's hovered or focused
+  sheetLabel?: boolean;
 }
 
 const {
@@ -18,12 +25,14 @@ const {
   ogType = 'website',
   ogImageUrl,
   preloadSrcset,
+  preloadSizes,
+  current,
+  pageClass,
+  sheetLabel,
 } = Astro.props;
 
 const isHome = Astro.url.pathname === '/';
 const TitleTag = isHome ? 'h1' : 'span';
-
-const currentYear = new Date().getFullYear();
 
 // Cloudflare Email Obfuscation doesn't apply to Worker responses, so the address ships
 // XOR-encoded and the inline script below turns it into a mailto: link in the browser.
@@ -64,7 +73,7 @@ const encodedEmail = Array.from(siteConfig.email, (c) =>
         type="image/avif"
         fetchpriority="high"
         imagesrcset={preloadSrcset}
-        imagesizes={siteConfig.imageSizes}
+        imagesizes={preloadSizes}
       />
     )}
     {isHome && (
@@ -84,23 +93,17 @@ const encodedEmail = Array.from(siteConfig.email, (c) =>
   </head>
   <body>
     <a href="#main" class="skip-link">Skip to content</a>
-    <div class="page">
+    <div class:list={['page', pageClass]}>
       <header class="site">
-        <TitleTag class="title"><a href="/">{siteConfig.title}</a></TitleTag>
-        <span class="tagline">
-          {siteConfig.tagline}
-          <span aria-hidden="true"> · </span>
+        <TitleTag class="name"><a href="/">{siteConfig.title}</a></TitleTag>
+        {sheetLabel && <span class="zone-label" aria-hidden="true">Contact sheet</span>}
+        <nav aria-label="Site">
+          <a href="/index/" aria-current={current === 'index' ? 'page' : undefined}>Index</a>
           <a data-email={encodedEmail}>Email</a>
-        </span>
+        </nav>
       </header>
-      <main id="main">
-        <slot />
-      </main>
-      <footer class="footer">
-        <a href="/feed.xml">RSS</a>
-        <span aria-hidden="true"> · </span>
-        &copy; {currentYear}
-      </footer>
+      {/* Each template supplies <main id="main"> (and the photo page its footer) */}
+      <slot />
     </div>
     <script is:inline define:vars={{ emailKey }}>
       for (const a of document.querySelectorAll('a[data-email]')) {

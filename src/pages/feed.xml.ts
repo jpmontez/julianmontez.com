@@ -22,7 +22,7 @@ export async function GET(context: APIContext) {
           })
         );
         return {
-          title: post.data.title || dateline(post.data),
+          title: dateline(post.data),
           pubDate: post.data.date,
           link: `/${postSlug(post)}/`,
           description: postDescription(post.data),

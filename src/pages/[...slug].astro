@@ -1,85 +1,11 @@
 ---
-import { getCollection, render } from 'astro:content';
-import { getImage } from 'astro:assets';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import PostImage from '../components/PostImage.astro';
-import Slideshow from '../components/Slideshow.astro';
-import { siteConfig } from '../config';
-import { dateline, displayDate, imageSrcsets, postDescription, postSlug } from '../utils';
+import PhotoPage from '../components/PhotoPage.astro';
+import { getPosts, postSlug } from '../utils';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts');
-  return posts.map((post) => ({ params: { slug: postSlug(post) }, props: { post } }));
+  const posts = await getPosts();
+  return posts.map((post, index) => ({ params: { slug: postSlug(post) }, props: { posts, index } }));
 }
-
-const { post } = Astro.props;
-const { date, title, location, images } = post.data;
-const { Content } = await render(post);
-
-const isoDate = date.toISOString().slice(0, 10);
-const headline = title || dateline(post.data);
-const pageTitle = `${headline} — ${siteConfig.title}`;
-const pageDescription = postDescription(post.data);
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
-const ogImage = await getImage({ src: images[0].src, width: 1080, format: 'jpg' });
-// Photographer credit for image search. The build strips EXIF/IPTC from the files, so it's declared here.
-// contentUrl is each <img>'s fallback src, the URL search engines index.
-const author = { '@type': 'Person', name: siteConfig.author, url: Astro.site!.href };
-const imageObjects = await Promise.all(
-  images.map(async (img) => ({
-    '@type': 'ImageObject',
-    contentUrl: new URL((await imageSrcsets(img.src)).fallback, Astro.site).href,
-    creator: author,
-    creditText: siteConfig.author,
-    copyrightNotice: `© ${date.getUTCFullYear()} ${siteConfig.author}`,
-  }))
-);
 ---
 
-<BaseLayout
-  pageTitle={pageTitle}
-  pageDescription={pageDescription}
-  canonicalUrl={canonicalUrl}
-  ogType="article"
-  ogImageUrl={new URL(ogImage.src, Astro.site).href}
->
-  <script
-    is:inline
-    slot="head"
-    type="application/ld+json"
-    set:html={JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'BlogPosting',
-      headline,
-      image: imageObjects,
-      datePublished: isoDate,
-      ...(location && { contentLocation: { '@type': 'Place', name: location } }),
-      author,
-      description: pageDescription,
-      mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
-    })}
-  />
-
-  <article class="post">
-    {images.length > 1 ? (
-      <Slideshow images={images} />
-    ) : (
-      <PostImage image={images[0].src} alt={images[0].alt} isEager isLcp />
-    )}
-
-    {post.body?.trim() && (
-      <div class="body">
-        <Content />
-      </div>
-    )}
-
-    <p class="meta">
-      {location && <span class="location">{location}</span>}
-      <time datetime={isoDate}>{displayDate(date)}</time>
-    </p>
-  </article>
-
-  <nav class="feed-nav" aria-label="Post navigation">
-    <a href="/">Back to feed</a>
-  </nav>
-</BaseLayout>
+<PhotoPage {...Astro.props} />

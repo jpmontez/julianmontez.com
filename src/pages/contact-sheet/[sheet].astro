@@ -1,0 +1,14 @@
+---
+import ContactSheet from '../../components/ContactSheet.astro';
+import { getPosts, sheetCount } from '../../utils';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return Array.from({ length: sheetCount(posts.length) }, (_, i) => ({
+    params: { sheet: String(i + 1) },
+    props: { posts, sheet: i + 1 },
+  }));
+}
+---
+
+<ContactSheet {...Astro.props} />

@@ -1,0 +1,91 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfig } from '../config';
+import { fullDate, postSlug, sheetCount, thumbnail } from '../utils';
+
+interface Props {
+  // All posts, newest first (getPosts()), and the 1-based sheet to show
+  posts: CollectionEntry<'posts'>[];
+  sheet: number;
+}
+
+const { posts, sheet } = Astro.props;
+const total = sheetCount(posts.length);
+const start = (sheet - 1) * siteConfig.sheetSize;
+const frames = await Promise.all(
+  posts.slice(start, start + siteConfig.sheetSize).map(async (post, i) => {
+    const n = start + i + 1;
+    const { title, date } = post.data;
+    return {
+      n,
+      href: `/${postSlug(post)}/`,
+      label: [n, title, fullDate(date)].filter(Boolean).join(', '),
+      thumb: await thumbnail(post.data.images[0].src, 224),
+    };
+  })
+);
+const first = frames[0].n;
+const last = frames.at(-1)!.n;
+const range = first === last ? `frame ${first}` : `frames ${first}–${last}`;
+const sheetHref = (s: number) => `/contact-sheet/${s}/`;
+// Only the first row on a phone (4 columns) loads eagerly; at 1440 the rest of row one is visible and loads at once
+const EAGER = 4;
+---
+
+<BaseLayout
+  pageTitle={`Contact sheet ${sheet} of ${total} – ${siteConfig.title}`}
+  canonicalUrl={new URL(sheetHref(sheet), Astro.site).href}
+  pageClass="sheet-page"
+>
+  {/* Phone shows this under the header; desktop moves it to the footer row */}
+  <p class="sheet-label">Contact sheet, {range}</p>
+  <main id="main">
+    <h1 class="visually-hidden">Contact sheet {sheet} of {total}</h1>
+    <div class="sheet">
+      {frames.map((frame, i) => (
+        <a id={`frame-${frame.n}`} href={frame.href} aria-label={frame.label}>
+          <picture>
+            <source srcset={frame.thumb.avif} type="image/avif" />
+            <source srcset={frame.thumb.webp} type="image/webp" />
+            <img
+              src={frame.thumb.src}
+              width={frame.thumb.width}
+              height={frame.thumb.height}
+              alt=""
+              loading={i < EAGER ? 'eager' : 'lazy'}
+              decoding="async"
+            />
+          </picture>
+          <span class="n">{frame.n}</span>
+        </a>
+      ))}
+    </div>
+  </main>
+
+  <footer>
+    <nav aria-label="Contact sheets">
+      {sheet > 1 ? <a href={sheetHref(sheet - 1)} rel="prev">Previous</a> : <span>Previous</span>}
+      <span class="count">Sheet {sheet} of {total}</span>
+      {sheet < total ? <a href={sheetHref(sheet + 1)} rel="next">Next</a> : <span>Next</span>}
+      <a class="close" href={frames[0].href}>Close</a>
+    </nav>
+  </footer>
+
+  <script is:inline>
+    const nav = document.querySelector('.sheet-page footer nav');
+    // Only a photo slug, so ?from= can't redirect off-site
+    const from = new URLSearchParams(location.search).get('from');
+    if (from && /^\d{4}\/\d{2}\/[a-z0-9-]+$/.test(from)) {
+      nav.querySelector('.close').href = `/${from}/`;
+      for (const a of nav.querySelectorAll('a[rel]')) a.search = `?from=${from}`;
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented) return;
+      if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+      const selector = { ArrowLeft: 'a[rel="prev"]', ArrowRight: 'a[rel="next"]', Escape: '.close' }[e.key];
+      const link = selector && nav.querySelector(selector);
+      if (link) location.href = link.href;
+    });
+  </script>
+</BaseLayout>

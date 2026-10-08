@@ -4,7 +4,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { siteConfig } from '../config';
 ---
 
-<BaseLayout pageTitle={`Not found · ${siteConfig.title}`}>
+<BaseLayout pageTitle={`Not found – ${siteConfig.title}`} pageClass="not-found">
   <meta slot="head" name="robots" content="noindex" />
-  <p class="feed-nav">Page not found. <a href="/">Back to the photos</a></p>
+  <main id="main">
+    <p>Page not found. <a href="/">Back to the photos</a></p>
+  </main>
 </BaseLayout>

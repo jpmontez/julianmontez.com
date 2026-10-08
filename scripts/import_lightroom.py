@@ -2,11 +2,10 @@
 # /// script
 # requires-python = ">=3.14"
 # ///
-"""Import Lightroom JPG exports into the blog assets and scaffold posts with alt text from Claude Code."""
+"""Import Lightroom JPG exports into the blog assets and scaffold one post per photo with alt text from Claude Code."""
 
 import argparse
 import datetime as dt
-import itertools
 import json
 import os
 import re
@@ -20,8 +19,9 @@ ROOT = Path(__file__).resolve().parents[1]
 PHOTOS_DIR = ROOT / "src" / "assets" / "photos"
 POSTS_DIR = ROOT / "src" / "content" / "posts"
 
-# Lightroom export format: YYYYMMDD-DSC_NNNN.jpg
-SOURCE_PATTERN = re.compile(r"^(?P<date>\d{8})-DSC_(?P<num>\d{4,})\.jpg$", re.IGNORECASE)
+# Lightroom export format: YYYYMMDD-DSC_NNNN.jpg (Nikon) or YYYYMMDD-DSCFNNNN.jpg (Fujifilm), optionally
+# with the -Edit suffix Lightroom adds after an external edit (dropped from the imported name)
+SOURCE_PATTERN = re.compile(r"^(?P<date>\d{8})-(?P<frame>DSC_\d{4,}|DSCF\d{4,})(?:-Edit)?\.jpg$", re.IGNORECASE)
 
 ALT_PROMPT = (
     "Read the image file below, then write alt text for it as a photograph on a photoblog. "
@@ -49,7 +49,7 @@ def parse_candidates(source_dir):
         except ValueError:
             print(f"Skipping {path.name}: invalid date {match['date']}", file=sys.stderr)
             continue
-        photos.append(Photo(path, date, PHOTOS_DIR / f"{date}-DSC_{match['num']}.jpg"))
+        photos.append(Photo(path, date, PHOTOS_DIR / f"{date}-{match['frame'].upper()}.jpg"))
     return photos
 
 
@@ -70,23 +70,6 @@ def copy_photos(photos, overwrite):
     return new
 
 
-def prompt_slug(date, default):
-    while True:
-        name = input(f"Multiple images on {date}. Enter a custom name (default: {default}): ").strip()
-        slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", name).strip("-").lower() if name else default
-        if slug:
-            return slug if slug.startswith(str(date)) else f"{date}-{slug}"
-        print("Slug cannot be empty.")
-
-
-def choose_post_path(date, photos):
-    slug = photos[0].destination.stem if len(photos) == 1 else prompt_slug(date, f"{date}-photos")
-    while (path := POSTS_DIR / f"{slug}.md").exists():
-        print(f"{path} already exists. Enter another name.")
-        slug = prompt_slug(date, slug)
-    return path
-
-
 def alt_text(photo):
     # Headless Claude Code reads the image with its Read tool. ANTHROPIC_API_KEY is dropped so usage
     # bills to the Claude Code login instead of a pay-per-use API account.
@@ -105,16 +88,14 @@ def alt_text(photo):
     return text
 
 
-def write_post(path, date, photos):
-    lines = ["---", f"date: {date}", "images:"]
-    for photo in photos:
-        lines.append(f'  - src: "../../assets/photos/{photo.destination.name}"')
-        print(f"Generating alt text for {photo.destination.name}...")
-        try:
-            # JSON strings are valid YAML double-quoted scalars, so quotes and colons are escaped safely.
-            lines.append(f"    alt: {json.dumps(alt_text(photo), ensure_ascii=False)}")
-        except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
-            print(f"WARNING: no alt text for {photo.destination.name} ({error}); add it by hand.", file=sys.stderr)
+def write_post(path, photo):
+    lines = ["---", f"date: {photo.date}", "images:", f'  - src: "../../assets/photos/{photo.destination.name}"']
+    print(f"Generating alt text for {photo.destination.name}...")
+    try:
+        # JSON strings are valid YAML double-quoted scalars, so quotes and colons are escaped safely.
+        lines.append(f"    alt: {json.dumps(alt_text(photo), ensure_ascii=False)}")
+    except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
+        print(f"WARNING: no alt text for {photo.destination.name} ({error}); add it by hand.", file=sys.stderr)
     lines += ["---", ""]
     path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Wrote post: {path}")
@@ -141,10 +122,12 @@ def main():
         return 0
 
     new = copy_photos(candidates, args.overwrite)
-    # Candidates are sorted by filename (YYYYMMDD-DSC_NNNN), so same-day photos are adjacent and in order.
-    for date, group in itertools.groupby(new, key=lambda photo: photo.date):
-        photos = list(group)
-        write_post(choose_post_path(date, photos), date, photos)
+    for photo in new:
+        path = POSTS_DIR / f"{photo.destination.stem}.md"
+        if path.exists():
+            print(f"Skipping {path.name}: post already exists", file=sys.stderr)
+            continue
+        write_post(path, photo)
     return 0
 
 

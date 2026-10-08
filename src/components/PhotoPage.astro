@@ -1,0 +1,149 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getImage } from 'astro:assets';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfig } from '../config';
+import { caption, fullDate, imageSrcsets, photoSizes, postDescription, postSlug, sheetOf } from '../utils';
+
+interface Props {
+  // All posts, newest first (getPosts()), and the one to show
+  posts: CollectionEntry<'posts'>[];
+  index: number;
+}
+
+const { posts, index } = Astro.props;
+const post = posts[index];
+const { date, title } = post.data;
+const image = post.data.images[0];
+// Newest first: Previous goes newer, Next goes older
+const prev = posts[index - 1];
+const next = posts[index + 1];
+const href = (p: CollectionEntry<'posts'>) => `/${postSlug(p)}/`;
+
+const isHome = Astro.url.pathname === '/';
+const isoDate = date.toISOString().slice(0, 10);
+const pageTitle = `${caption(post.data)} – ${siteConfig.title}`;
+const pageDescription = postDescription(post.data);
+const canonicalUrl = new URL(href(post), Astro.site).href;
+const sizes = photoSizes(image.src);
+const { avif, webp, native, fallback } = await imageSrcsets(image.src);
+const nextSet = next && (await imageSrcsets(next.data.images[0].src));
+const ogImage = await getImage({ src: image.src, width: 1080, format: 'jpg' });
+
+// Photographer credit for image search. The build strips EXIF/IPTC from the files, so it's declared here.
+// contentUrl is the <img>'s fallback src, the URL search engines index.
+const author = { '@type': 'Person', name: siteConfig.author, url: Astro.site!.href };
+// Back to this frame on its contact sheet; the sheet's Close link returns here via ?from
+const sheetHref = `/contact-sheet/${sheetOf(index)}/?from=${postSlug(post)}#frame-${index + 1}`;
+---
+
+<BaseLayout
+  pageTitle={pageTitle}
+  pageDescription={isHome ? undefined : pageDescription}
+  canonicalUrl={isHome ? undefined : canonicalUrl}
+  ogType={isHome ? 'website' : 'article'}
+  ogImageUrl={new URL(ogImage.src, Astro.site).href}
+  preloadSrcset={avif}
+  preloadSizes={sizes}
+  pageClass="photo-page"
+  sheetLabel
+>
+  {!isHome && (
+    <script
+      is:inline
+      slot="head"
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: caption(post.data),
+        image: {
+          '@type': 'ImageObject',
+          contentUrl: new URL(fallback, Astro.site).href,
+          creator: author,
+          creditText: siteConfig.author,
+          copyrightNotice: `© ${date.getUTCFullYear()} ${siteConfig.author}`,
+        },
+        datePublished: isoDate,
+        author,
+        description: pageDescription,
+        mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+      })}
+    />
+  )}
+
+  <main id="main">
+    <figure>
+      {/* Click zones over the photo: top third → contact sheet, bottom-left → previous, bottom-right → next */}
+      <div class="photo">
+        <picture>
+          <source type="image/avif" srcset={avif} sizes={sizes} />
+          <source type="image/webp" srcset={webp} sizes={sizes} />
+          <img
+            src={fallback}
+            srcset={native || undefined}
+            sizes={sizes}
+            alt={image.alt}
+            width={image.src.width}
+            height={image.src.height}
+            style={`--w: ${image.src.width}px; --ratio: ${(image.src.width / image.src.height).toFixed(4)}`}
+            fetchpriority="high"
+            decoding="async"
+          />
+        </picture>
+        <a class="zone zone-sheet" href={sheetHref} aria-label="Contact sheet"></a>
+        {prev && <a class="zone zone-prev" href={href(prev)} aria-label="Previous photo"></a>}
+        {next && <a class="zone zone-next" href={href(next)} aria-label="Next photo"></a>}
+      </div>
+      <figcaption>
+        {title && `${title}, `}<time datetime={isoDate}>{fullDate(date)}</time>
+      </figcaption>
+    </figure>
+  </main>
+
+  <footer>
+    <nav aria-label="Photos">
+      {prev ? <a href={href(prev)} rel="prev">Previous</a> : <span>Previous</span>}
+      <span class="center">
+        <span class="count">{index + 1} of {posts.length}</span>
+        <a class="sheet-link" href={sheetHref}>Contact sheet</a>
+      </span>
+      {
+        next ? (
+          <a
+            href={href(next)}
+            rel="next"
+            data-avif={nextSet!.avif}
+            data-webp={nextSet!.webp}
+            data-native={nextSet!.native || nextSet!.fallback}
+            data-sizes={photoSizes(next.data.images[0].src)}
+          >
+            Next
+          </a>
+        ) : (
+          <span>Next</span>
+        )
+      }
+    </nav>
+  </footer>
+
+  <script is:inline>
+    document.addEventListener('keydown', (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented) return;
+      if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+      const rel = { ArrowLeft: 'prev', ArrowRight: 'next' }[e.key];
+      const link = rel && document.querySelector(`.photo-page footer a[rel="${rel}"]`);
+      if (link) location.href = link.href;
+    });
+    // Warm the cache with the next photo in the format this browser picked for the current one
+    const nextLink = document.querySelector('.photo-page footer a[rel="next"]');
+    const current = document.querySelector('.photo img');
+    const warm = () => {
+      const format = /\.avif/.test(current.currentSrc) ? 'avif' : /\.webp/.test(current.currentSrc) ? 'webp' : 'native';
+      const img = new Image();
+      img.sizes = nextLink.dataset.sizes;
+      img.srcset = nextLink.dataset[format];
+    };
+    if (nextLink) current.complete ? warm() : current.addEventListener('load', warm, { once: true });
+  </script>
+</BaseLayout>

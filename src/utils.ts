@@ -2,18 +2,29 @@ import type { ImageMetadata } from 'astro';
 import { getImage } from 'astro:assets';
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { siteConfig } from './config';
+import { photoPath } from './slug.mjs';
 
 export async function getPosts() {
   const posts = await getCollection('posts');
-  return posts.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+  // Newest first; same-day posts by file name, descending, so their order never shifts between builds
+  return posts.sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime() || postSlug(b).localeCompare(postSlug(a))
+  );
 }
 
-// "YYYY/MM/filename" — derived from filePath to preserve case (glob loader lowercases post.id)
+// "YYYY/MM/dsc-0391", from the post's file name (filePath keeps case; the glob loader lowercases post.id).
+// public/_redirects maps the older URLs.
 export function postSlug(post: CollectionEntry<'posts'>) {
-  const { date } = post.data;
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const fileName = (post.filePath ?? post.id).split('/').pop()!.replace(/\.md$/, '');
-  return `${date.getUTCFullYear()}/${month}/${fileName}`;
+  return photoPath((post.filePath ?? post.id).split('/').pop()!);
+}
+
+// Contact sheets: 36 frames each, newest first. index is the post's 0-based position in getPosts().
+export function sheetOf(index: number) {
+  return Math.floor(index / siteConfig.sheetSize) + 1;
+}
+
+export function sheetCount(total: number) {
+  return Math.ceil(total / siteConfig.sheetSize);
 }
 
 // "21 Feb 2026"
@@ -26,25 +37,57 @@ export function displayDate(date: Date) {
   });
 }
 
-// "Crown Heights North | 21 Feb 2026", or just the date without a location
-export function dateline({ location, date }: CollectionEntry<'posts'>['data']) {
-  return location ? `${location} | ${displayDate(date)}` : displayDate(date);
+// "3 June 2019"
+export function fullDate(date: Date) {
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+// "16 May"
+export function shortDate(date: Date) {
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+}
+
+// "Crown Heights North, 16 May 2026", or just the date without a title
+export function caption({ title, date }: CollectionEntry<'posts'>['data']) {
+  return title ? `${title}, ${fullDate(date)}` : fullDate(date);
+}
+
+// "Crown Heights North | 21 Feb 2026", or just the date without a title
+export function dateline({ title, date }: CollectionEntry<'posts'>['data']) {
+  return title ? `${title} | ${displayDate(date)}` : displayDate(date);
 }
 
 // Alt text is never rendered visibly, so it gives each post a unique description (page meta, JSON-LD, RSS)
-export function postDescription({ location, images }: CollectionEntry<'posts'>['data']) {
-  return location ? `${location}. ${images[0].alt}` : images[0].alt;
+export function postDescription({ title, images }: CollectionEntry<'posts'>['data']) {
+  return title ? `${title}. ${images[0].alt}` : images[0].alt;
 }
 
-// Widths are derived from the max CSS display size (siteConfig.photoWidth, 520px):
-//   520px = 1× desktop exact match
-//   660px = 1.75× mobile (Lighthouse's Moto G Power: (412px - 36px padding) × 1.75 DPR ≈ 658px)
-//   760px = 2× mid-range mobile
-//   1040px = 2× desktop (Retina) exact match
-const WIDTHS = [siteConfig.photoWidth, 660, 760, siteConfig.photoWidth * 2];
+// Photos fill the viewport (a landscape is ~1276×1021 CSS px at 1440×900), so widths run from a 1× phone
+// to a 2× desktop. The largest a 390px phone at 3× picks is 1280.
+const WIDTHS = [640, 960, 1280, 1600, 1920, 2560];
 const MAX_WIDTH = WIDTHS.at(-1)!;
 
-// Shared by PostImage and the feed's LCP preload so both reference identical URLs.
+// Rendered width of a photo: full width inside the 16px gutters on phones; on desktop the narrower of
+// the column (100vw - 64px padding) and the height cap (100vh - 164px) times the photo's aspect ratio.
+// Must match .photo img in theme.css.
+export function photoSizes(image: ImageMetadata) {
+  const ratio = (image.width / image.height).toFixed(4);
+  return `(max-width: 600px) calc(100vw - 32px), min(calc(100vw - 64px), calc((100vh - 164px) * ${ratio}))`;
+}
+
+// Thumbnails at 2×+ of their slot: 144px for the index's 48px rows, 224px for the contact sheet's 112px boxes
+export async function thumbnail(image: ImageMetadata, height = 144) {
+  const width = Math.round((height * image.width) / image.height);
+  const nativeFormat = image.format === 'png' ? 'png' : 'jpg';
+  const [avif, webp, native] = await Promise.all(
+    (['avif', 'webp', nativeFormat] as const).map((format) =>
+      getImage({ src: image, width, height, format, quality: format === 'avif' ? 50 : 80 })
+    )
+  );
+  return { avif: avif.src, webp: webp.src, src: native.src, width, height };
+}
+
+// Shared by the photo page, its LCP preload and the RSS feed so all reference identical URLs.
 export async function imageSrcsets(image: ImageMetadata) {
   const nativeFormat = image.format === 'png' ? 'png' : 'jpg';
   // Native format: only widths smaller than the original
@@ -59,8 +102,8 @@ export async function imageSrcsets(image: ImageMetadata) {
     images.map((v) => `${v.src} ${v.attributes.width}w`).join(', ');
 
   const [avif, webp, native] = await Promise.all([
-    variants(transcodedWidths, 'avif', 40),
-    variants(transcodedWidths, 'webp', 80),
+    variants(transcodedWidths, 'avif', 60),
+    variants(transcodedWidths, 'webp', 85),
     variants(nativeWidths, nativeFormat, 85),
   ]);
   // Largest native variant is the fallback src

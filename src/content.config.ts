@@ -7,8 +7,8 @@ const posts = defineCollection({
   schema: ({ image }) =>
     z.object({
       date: z.coerce.date(),
+      // Shown before the date in captions and the index: usually a neighbourhood, never exact coordinates
       title: z.string().optional(),
-      location: z.string().optional(),
       images: z
         .array(
           z.object({
@@ -16,7 +16,8 @@ const posts = defineCollection({
             alt: z.string().min(1),
           })
         )
-        .min(1),
+        .min(1)
+        .max(1),
     }),
 });
 

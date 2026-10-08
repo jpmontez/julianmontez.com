@@ -2,7 +2,7 @@
   "name": "julianmontez.com",
   "private": true,
   "scripts": {
-    "build": "astro check && astro build",
+    "build": "astro check && astro build && node scripts/check_redirects.mjs",
     "deploy": "wrangler deploy --name \"$WORKER_NAME\" --domain \"$SITE_DOMAIN\""
   },
   "dependencies": {

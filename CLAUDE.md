@@ -47,19 +47,20 @@ infra/                  → OpenTofu config for the Cloudflare zone (see infra/R
 src/content.config.ts   → content collection schema (Zod) for posts
 src/content/posts/      → Markdown posts with YAML front matter
 src/assets/photos/      → full-resolution source images (processed at build time)
-src/config.ts           → site config (title, pagination, image sizes)
-src/utils.ts            → getPosts, postSlug, displayDate, dateline, postDescription, imageSrcsets (shared responsive variants)
+src/config.ts           → site config (title, email, description, feed size)
+src/slug.mjs            → photoPath: post file name → URL path (shared by utils.ts and astro.config.mjs sitemap dates)
+src/utils.ts            → getPosts, postSlug, fullDate/shortDate, caption, dateline, postDescription, imageSrcsets, photoSizes, thumbnail
 src/layouts/
-  BaseLayout.astro      → base HTML layout (meta, OG, preload, feed link, skip link)
+  BaseLayout.astro      → base HTML layout (meta, OG, preload, feed link, skip link, header with Index/Email)
 src/components/
-  Feed.astro            → feed page body (posts, LCP preload, pagination nav)
-  PostImage.astro       → responsive <picture> with AVIF/WebP/native srcset
-  Slideshow.astro       → multi-image horizontal slideshow with JS nav
+  PhotoPage.astro       → photo page: one photo, caption, Previous/n of total/Next, arrow keys, next-image preload
+  ContactSheet.astro    → contact sheet: numbered thumbnail grid, label, Previous/Sheet n of N/Next/Close, ?from= and keys
 src/pages/
   404.astro             → not-found page (assets notFoundHandling: 404-page)
-  index.astro           → paginated feed (page 1)
-  page/[page].astro     → paginated feed (pages 2+)
-  [...slug].astro       → individual post pages at /YYYY/MM/slug/
+  index.astro           → newest photo (PhotoPage)
+  index/index.astro     → /index/: every photo grouped by year, with thumbnails
+  [...slug].astro       → each photo's page at /YYYY/MM/dsc-0391/ (PhotoPage; the whole path comes from the post's file name, never from `date:`)
+  contact-sheet/[sheet].astro → /contact-sheet/N/: 36 frames per sheet (ContactSheet)
   feed.xml.ts           → RSS feed
   rss.xml.ts            → same feed at a legacy URL
 src/styles/
@@ -69,18 +70,16 @@ src/styles/
 **Key architectural facts:**
 - `src/styles/theme.css` is the single stylesheet — imported globally via BaseLayout
 - Post titles are intentionally hidden in rendered output; visible only in metadata/feeds
-- Multi-image posts render as a horizontal slideshow on post pages and a vertical stack in the feed
-- The feed's LCP preload is AVIF-only and uses `imageSrcsets()` so its URLs match `PostImage` exactly
-- `src/config.ts` controls title, tagline, pagination, image sizes
-- Only the feed's first image loads eagerly. Extra eager images download alongside the LCP image on Lighthouse's throttled mobile profile and cost LCP points (1.8s → 1.1s when removed)
+- Every post is exactly one photo (`images` has `.max(1)`); order is newest first, same-day posts by file name descending. "Next" goes older; the ends show grey text instead of wrapping
+- Three plain `<a href>` click zones overlay the photo (box sized to the image): top third → its contact sheet frame (`?from=` + `#frame-N`), bottom-left → Previous, bottom-right → Next. On desktop, hovering/focusing the top third reveals a grey "Contact sheet" label centred in the header (`.zone-label`, BaseLayout `sheetLabel`); phones get a "Contact sheet" link in the bottom nav instead. Navigation works without JS; the inline script only adds arrow keys and preloads the next image
+- The photo `<img>` gets an explicit CSS width from inline `--w`/`--ratio` matching `photoSizes()`, so its box is final before the image loads (no layout shift)
+- The photo page's LCP preload is AVIF-only and uses `imageSrcsets()` + `photoSizes()` so its URLs match the `<picture>` exactly. `photoSizes()` must match the `.photo img` max-width/max-height in `theme.css`
+- `/page/*` (the old paginated feed) redirects to `/index/` via `public/_redirects`
 - The header email link ships XOR-encoded (`data-email`) and a tiny inline script in `BaseLayout.astro` builds the `mailto:` in the browser. Cloudflare Email Obfuscation doesn't apply to Worker responses, so never render the address as plain text anywhere in the HTML
 - Images in `src/assets/photos/` are processed by Astro's sharp pipeline at build time
 - Deploys use Wrangler, not `cf`, until [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed. Don't add `@astrojs/cloudflare`: it moves output to `dist/client/` and adds a Worker script plus session KV and Images binding defaults this static site doesn't need
 
-**View transitions & slideshow patterns (`src/styles/theme.css`, `src/components/Slideshow.astro`):**
-- Cross-document view transitions enabled via `@view-transition { navigation: auto }` (CSS only)
-- `.slideshow-track` CSS initial `transform: translateX(calc(...))` — **do not remove it**. It pre-centers slide 0 so the view-transition snapshot is correct before JS runs; removing it causes a visible jump on crossfade.
-- `snapCenter()` (inline JS in `Slideshow.astro`) uses `transition: none` → `centerSlide()` → force reflow → restore transition. This pattern must be preserved for resize/load events; breakpoint formulas must exactly match the CSS initial transforms.
+**Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (17px at ≤600px); colors #fff, #000, #6b6b6b (secondary), #e4e4e4 (rules) and nothing else. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
 
 ## Content Format
 
@@ -89,20 +88,19 @@ Posts live at `src/content/posts/YYYY-MM-DD-slug.md` with YAML front matter:
 ```markdown
 ---
 date: 2024-10-12
-title: "Optional title"
-location: "Optional place, e.g. Crown Heights North"
+title: "Optional, e.g. Crown Heights North"
 images:
   - src: ../../assets/photos/2024-10-12-photo.jpg
     alt: "Alt text."
 ---
-
-Markdown body.
 ```
 
+Post bodies aren't rendered; the photo and its caption are the whole page.
+
+- The file name sets the URL (`2026-02-21-DSC_0391.md` → `/2026/02/dsc-0391/`); `date:` sets the order and the shown date. Renaming a live post's file changes its URL, so add the old path to `public/_redirects` (the build fails if a redirect target doesn't exist)
 - Image `src` paths are relative from `src/content/posts/` to `src/assets/photos/`
-- At least one image is required
-- `title` is optional and intentionally not rendered on the page
-- `location` is optional; it's shown on its own line above the date (and as `Crown Heights North | 16 May 2026` in `<title>` and RSS) and leads the meta description. Use a neighbourhood, never exact coordinates
+- Exactly one image per post
+- `title` is optional; it's shown before the date ("Crown Heights North, 16 May 2026" in the caption and `<title>`, `Crown Heights North | 16 May 2026` in RSS), names the photo in the index and contact sheet, and leads the meta description. Usually a neighbourhood or a short name for the photo; never exact coordinates
 
 ## Deployment
 

@@ -24,16 +24,16 @@ src/
   assets/photos/       # full-resolution source images
   content/posts/       # Markdown posts (YAML front matter)
   components/
-    Feed.astro         # feed page body shared by index and page/[page]
-    PostImage.astro    # responsive <picture> with AVIF/WebP srcset
-    Slideshow.astro    # multi-image horizontal slideshow
+    PhotoPage.astro    # one photo with Previous/Next, shared by / and each photo's page
+    ContactSheet.astro # contact sheet: a numbered grid of thumbnails with a sheet pager
   layouts/
     BaseLayout.astro   # base HTML layout
   pages/
     404.astro          # not-found page (served with a 404 status)
-    index.astro        # paginated feed (page 1)
-    page/[page].astro  # paginated feed (pages 2+)
-    [...slug].astro    # post detail pages
+    index.astro        # newest photo
+    index/index.astro  # index of all photos by year (/index/)
+    [...slug].astro    # each photo's own page
+    contact-sheet/[sheet].astro # contact sheets of 36 frames (/contact-sheet/1/, …)
     feed.xml.ts        # RSS feed
     rss.xml.ts         # same feed at a legacy URL
   styles/
@@ -56,16 +56,16 @@ Create a Markdown file in `src/content/posts/`, for example `2024-10-12-my-post.
 ```markdown
 ---
 date: 2024-10-12
-location: Crown Heights North   # optional; shown above the date
+title: Crown Heights North      # optional; shown before the date
 images:
   - src: ../../assets/photos/2024-10-12-photo.jpg
     alt: "Describe the photo."
 ---
-
-Optional markdown body.
 ```
 
-Place the source image in `src/assets/photos/`. Astro generates responsive variants (520/660/760/1040px in AVIF, WebP, and JPEG) at build time.
+One photo per post (the schema rejects more).
+
+Place the source image in `src/assets/photos/`. Astro generates responsive variants (640–2560px in AVIF, WebP, and JPEG, capped at the original's width) plus 144px index and 224px contact sheet thumbnails at build time. Photos display up to the full screen, so export from Lightroom at 2560px or more on the long edge; smaller files get upscaled on high-density screens.
 
 ## Lightroom Import
 
@@ -73,7 +73,7 @@ Place the source image in `src/assets/photos/`. Astro generates responsive varia
 uv run scripts/import_lightroom.py [--source DIR] [--overwrite]
 ```
 
-Imports files matching `YYYYMMDD-DSC_NNNN.jpg` (default source: `~/Desktop`), copies them to `src/assets/photos/`, and scaffolds post files in `src/content/posts/` with alt text written by headless Claude Code (`claude -p`), billed to your Claude Code login rather than the API. `uv` provides Python 3.14+ from the script's inline metadata; the script has no other dependencies. Requires the `claude` CLI on your PATH, logged in. If alt text generation fails, the post is still written without `alt` and a warning names the image; the build fails until you caption it by hand. A rerun after an interrupted import still writes posts for photos it already copied. After changing the script, run `uv run scripts/test_import_lightroom.py`.
+Imports files matching `YYYYMMDD-DSC_NNNN.jpg` or `YYYYMMDD-DSCFNNNN.jpg` (an optional Lightroom `-Edit` suffix is dropped) (default source: `~/Desktop`), copies them to `src/assets/photos/`, and scaffolds one post per photo in `src/content/posts/` with alt text written by headless Claude Code (`claude -p`), billed to your Claude Code login rather than the API. `uv` provides Python 3.14+ from the script's inline metadata; the script has no other dependencies. Requires the `claude` CLI on your PATH, logged in. If alt text generation fails, the post is still written without `alt` and a warning names the image; the build fails until you caption it by hand. A rerun after an interrupted import still writes posts for photos it already copied. After changing the script, run `uv run scripts/test_import_lightroom.py`.
 
 ## Deployment
 

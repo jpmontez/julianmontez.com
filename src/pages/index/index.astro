@@ -1,0 +1,65 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { siteConfig } from '../../config';
+import { getPosts, postSlug, shortDate, fullDate, thumbnail } from '../../utils';
+
+const posts = await getPosts();
+const entries = await Promise.all(
+  posts.map(async (post) => ({
+    href: `/${postSlug(post)}/`,
+    place: post.data.title ?? fullDate(post.data.date),
+    date: shortDate(post.data.date),
+    year: post.data.date.getUTCFullYear(),
+    thumb: await thumbnail(post.data.images[0].src),
+  }))
+);
+// Posts are newest first, so Map insertion order keeps years descending
+const years = new Map<number, typeof entries>();
+for (const entry of entries) years.set(entry.year, [...(years.get(entry.year) ?? []), entry]);
+// Only the rows visible on first paint load eagerly
+const EAGER = 6;
+---
+
+<BaseLayout pageTitle={`Index – ${siteConfig.title}`} current="index" pageClass="index-page">
+  <main id="main">
+    <h1 class="visually-hidden">Index</h1>
+    {[...years].map(([year, items]) => (
+      <section class="year">
+        <h2>{year}</h2>
+        <ul>
+          {items.map((item) => (
+            <li>
+              <a href={item.href}>
+                <picture>
+                  <source srcset={item.thumb.avif} type="image/avif" />
+                  <source srcset={item.thumb.webp} type="image/webp" />
+                  <img
+                    src={item.thumb.src}
+                    width={item.thumb.width}
+                    height={item.thumb.height}
+                    alt=""
+                    loading={entries.indexOf(item) < EAGER ? 'eager' : 'lazy'}
+                    decoding="async"
+                  />
+                </picture>
+                <span class="place">{item.place}</span>
+                <span class="date">{item.date}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </main>
+  {/* Clicking Index again after arriving from a photo goes back to that photo (and its scroll/history state) */}
+  <script is:inline>
+    document.querySelector('header.site a[aria-current="page"]').addEventListener('click', (e) => {
+      if (e.button || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || history.length < 2) return;
+      const from = document.referrer && new URL(document.referrer);
+      if (from && from.origin === location.origin && /^\/(\d{4}\/\d{2}\/[^/]+\/)?$/.test(from.pathname)) {
+        e.preventDefault();
+        history.back();
+      }
+    });
+  </script>
+</BaseLayout>
