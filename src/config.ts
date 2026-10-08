@@ -1,3 +1,6 @@
+// Max photo display width in px; must equal --photo-width in src/styles/theme.css
+const photoWidth = 520;
+
 export const siteConfig = {
   title: 'Julian Montez',
   homeTitle: 'Julian Montez — Photographer, Brooklyn NY',
@@ -8,6 +11,7 @@ export const siteConfig = {
   // Profile URLs for the homepage Person JSON-LD
   sameAs: ['https://www.instagram.com/julianpmontez/', 'https://github.com/jpmontez'],
   postsPerPage: 10,
-  imageSizes: '(max-width: 577px) 90vw, 520px',
+  photoWidth,
+  imageSizes: `(max-width: 577px) 90vw, ${photoWidth}px`,
   feedMaxPosts: 25,
 } as const;

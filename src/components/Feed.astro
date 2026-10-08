@@ -17,8 +17,8 @@ const rendered = await Promise.all(
   posts.map(async (post) => ({ post, Content: (await render(post)).Content }))
 );
 
-// Preload the first post's first image (LCP candidate)
-const { avif: preloadSrcset } = await imageSrcsets(posts[0].data.images[0].src);
+// Preload the first post's first image (LCP candidate); a site with no posts yet has none
+const preloadSrcset = posts[0] && (await imageSrcsets(posts[0].data.images[0].src)).avif;
 const pageTitle = pageNum === 1 ? siteConfig.homeTitle : `Page ${pageNum} — ${siteConfig.title}`;
 ---
 

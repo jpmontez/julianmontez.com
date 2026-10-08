@@ -48,7 +48,7 @@ src/content.config.ts   → content collection schema (Zod) for posts
 src/content/posts/      → Markdown posts with YAML front matter
 src/assets/photos/      → full-resolution source images (processed at build time)
 src/config.ts           → site config (title, pagination, image sizes)
-src/utils.ts            → getPosts, postSlug, displayDate, imageSrcsets (shared responsive variants)
+src/utils.ts            → getPosts, postSlug, displayDate, dateline, postDescription, imageSrcsets (shared responsive variants)
 src/layouts/
   BaseLayout.astro      → base HTML layout (meta, OG, preload, feed link, skip link)
 src/components/

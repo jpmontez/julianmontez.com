@@ -1,6 +1,7 @@
 import type { ImageMetadata } from 'astro';
 import { getImage } from 'astro:assets';
 import { getCollection, type CollectionEntry } from 'astro:content';
+import { siteConfig } from './config';
 
 export async function getPosts() {
   const posts = await getCollection('posts');
@@ -30,12 +31,18 @@ export function dateline({ location, date }: CollectionEntry<'posts'>['data']) {
   return location ? `${location} | ${displayDate(date)}` : displayDate(date);
 }
 
-// Widths are derived from the max CSS display size (520px, see config.ts imageSizes):
+// Alt text is never rendered visibly, so it gives each post a unique description (page meta, JSON-LD, RSS)
+export function postDescription({ location, images }: CollectionEntry<'posts'>['data']) {
+  return location ? `${location}. ${images[0].alt}` : images[0].alt;
+}
+
+// Widths are derived from the max CSS display size (siteConfig.photoWidth, 520px):
 //   520px = 1× desktop exact match
 //   660px = 1.75× mobile (Lighthouse's Moto G Power: (412px - 36px padding) × 1.75 DPR ≈ 658px)
 //   760px = 2× mid-range mobile
 //   1040px = 2× desktop (Retina) exact match
-const WIDTHS = [520, 660, 760, 1040];
+const WIDTHS = [siteConfig.photoWidth, 660, 760, siteConfig.photoWidth * 2];
+const MAX_WIDTH = WIDTHS.at(-1)!;
 
 // Shared by PostImage and the feed's LCP preload so both reference identical URLs.
 export async function imageSrcsets(image: ImageMetadata) {
@@ -44,7 +51,7 @@ export async function imageSrcsets(image: ImageMetadata) {
   const nativeWidths = WIDTHS.filter((w) => w < image.width);
   // Transcoded formats: cap large sources at the largest width
   // (avoids generating a multi-megapixel AVIF that mobile would wastefully select)
-  const transcodedWidths = image.width > 1040 ? WIDTHS : [...nativeWidths, image.width];
+  const transcodedWidths = image.width > MAX_WIDTH ? WIDTHS : [...nativeWidths, image.width];
 
   const variants = (widths: number[], format: 'avif' | 'webp' | 'png' | 'jpg', quality: number) =>
     Promise.all(widths.map((width) => getImage({ src: image, width, format, quality })));

@@ -42,6 +42,7 @@ src/
   utils.ts             # post and image helpers
 scripts/
   import_lightroom.py  # import Lightroom JPG exports
+  test_import_lightroom.py  # self-check: uv run scripts/test_import_lightroom.py
 infra/                 # OpenTofu config for the Cloudflare zone (see infra/README.md)
 wrangler.jsonc         # assets-only Worker config (name and domain come from env at deploy)
 astro.config.mjs       # Astro config
@@ -64,7 +65,7 @@ images:
 Optional markdown body.
 ```
 
-Place the source image in `src/assets/photos/`. Astro generates responsive variants (520/640/760/1040px in AVIF, WebP, and JPEG) at build time.
+Place the source image in `src/assets/photos/`. Astro generates responsive variants (520/660/760/1040px in AVIF, WebP, and JPEG) at build time.
 
 ## Lightroom Import
 
@@ -72,7 +73,7 @@ Place the source image in `src/assets/photos/`. Astro generates responsive varia
 uv run scripts/import_lightroom.py [--source DIR] [--overwrite]
 ```
 
-Imports files matching `YYYYMMDD-DSC_NNNN.jpg` (default source: `~/Desktop`), copies them to `src/assets/photos/`, and scaffolds post files in `src/content/posts/` with alt text written by headless Claude Code (`claude -p`), billed to your Claude Code login rather than the API. `uv` provides Python 3.14+ from the script's inline metadata; the script has no other dependencies. Requires the `claude` CLI on your PATH, logged in. If alt text generation fails, the post is still written and a warning names the image to caption by hand.
+Imports files matching `YYYYMMDD-DSC_NNNN.jpg` (default source: `~/Desktop`), copies them to `src/assets/photos/`, and scaffolds post files in `src/content/posts/` with alt text written by headless Claude Code (`claude -p`), billed to your Claude Code login rather than the API. `uv` provides Python 3.14+ from the script's inline metadata; the script has no other dependencies. Requires the `claude` CLI on your PATH, logged in. If alt text generation fails, the post is still written without `alt` and a warning names the image; the build fails until you caption it by hand. A rerun after an interrupted import still writes posts for photos it already copied. After changing the script, run `uv run scripts/test_import_lightroom.py`.
 
 ## Deployment
 
@@ -109,7 +110,7 @@ GitHub Actions (`.github/workflows/deploy.yml`):
 |---|---|---|
 | `validate` | PRs | `npm ci`, `astro check`, `astro build` |
 | `infra` | PRs and pushes | `tofu fmt -check`, `tofu validate`, terraform-docs sync check, `tofu plan -detailed-exitcode` (fails on drift; skipped when the read token isn't set, e.g. on a fresh fork). Never applies |
-| `deploy` | pushes to `main` | `npm ci`, `npm run build` (includes `astro check`), `npm run deploy` (`wrangler deploy`). Independent of `infra`, so zone drift never blocks a new post |
+| `deploy` | pushes to `main` (and manual runs on `main`) | `npm ci`, `npm run build` (includes `astro check`), `npm run deploy` (`wrangler deploy`). Independent of `infra`, so zone drift never blocks a new post |
 
 ### Credentials setup
 

@@ -5,7 +5,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PostImage from '../components/PostImage.astro';
 import Slideshow from '../components/Slideshow.astro';
 import { siteConfig } from '../config';
-import { dateline, displayDate, imageSrcsets, postSlug } from '../utils';
+import { dateline, displayDate, imageSrcsets, postDescription, postSlug } from '../utils';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
@@ -19,8 +19,7 @@ const { Content } = await render(post);
 const isoDate = date.toISOString().slice(0, 10);
 const headline = title || dateline(post.data);
 const pageTitle = `${headline} — ${siteConfig.title}`;
-// The title already fills <title>; alt text is never rendered visibly, so it gives each post a unique description
-const pageDescription = location ? `${location}. ${images[0].alt}` : images[0].alt;
+const pageDescription = postDescription(post.data);
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 const ogImage = await getImage({ src: images[0].src, width: 1080, format: 'jpg' });
 // Photographer credit for image search. The build strips EXIF/IPTC from the files, so it's declared here.

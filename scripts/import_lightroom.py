@@ -54,18 +54,18 @@ def parse_candidates(source_dir):
 
 
 def copy_photos(photos, overwrite):
-    """Copy every photo; return only the new ones. An overwritten photo keeps its existing post."""
+    """Copy every photo; return those no post references yet, so an interrupted run's photos still get posts."""
+    posts = "".join(path.read_text(encoding="utf-8") for path in POSTS_DIR.glob("*.md"))
     new = []
     for photo in photos:
-        exists = photo.destination.exists()
-        if exists and not overwrite:
+        if photo.destination.exists() and not overwrite:
             reply = input(f"{photo.destination.name} already exists. Overwrite with {photo.source.name}? [y/N]: ")
             if reply.strip().lower() not in {"y", "yes"}:
                 print(f"Skipping {photo.destination.name} (exists)")
                 continue
         shutil.copy2(photo.source, photo.destination)
         print(f"Copied {photo.source} -> {photo.destination}")
-        if not exists:
+        if photo.destination.name not in posts:
             new.append(photo)
     return new
 

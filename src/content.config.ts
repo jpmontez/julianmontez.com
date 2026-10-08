@@ -13,7 +13,7 @@ const posts = defineCollection({
         .array(
           z.object({
             src: image(),
-            alt: z.string().default('Photo'),
+            alt: z.string().min(1),
           })
         )
         .min(1),
