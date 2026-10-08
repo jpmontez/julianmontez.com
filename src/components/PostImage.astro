@@ -14,7 +14,7 @@ interface Props {
 const { image, alt, isEager = false, isLcp = false, linkHref } = Astro.props;
 
 const { avif, webp, native, fallback } = await imageSrcsets(image);
-const DISPLAY_WIDTH = 520; // matches max CSS display size (.post figure max-width)
+const DISPLAY_WIDTH = siteConfig.photoWidth;
 const displayHeight = Math.round(DISPLAY_WIDTH * (image.height / image.width));
 const Wrapper = linkHref ? 'a' : 'div';
 ---

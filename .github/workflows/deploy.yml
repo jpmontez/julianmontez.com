@@ -94,7 +94,8 @@ jobs:
 
   deploy:
     # Independent of infra: zone drift must not block publishing a post.
-    if: github.event_name != 'pull_request'
+    # Only main deploys, even when the workflow is run by hand on another branch.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production
     steps:

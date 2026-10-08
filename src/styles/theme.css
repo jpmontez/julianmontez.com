@@ -4,6 +4,8 @@
   --muted: #757575;
   --accent: #111111;
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.11);
+  /* Max photo display width; must equal photoWidth in src/config.ts */
+  --photo-width: 520px;
 }
 
 .skip-link {
@@ -99,7 +101,7 @@ header.site .tagline {
 }
 
 .image-stack {
-  max-width: 520px;
+  max-width: var(--photo-width);
   margin: 0 auto 18px;
   display: flex;
   flex-direction: column;
@@ -139,7 +141,7 @@ article.post {
 
 .post figure {
   margin: 0 auto 18px;
-  max-width: 520px;
+  max-width: var(--photo-width);
   width: 100%;
   box-shadow: var(--shadow);
   background: white;
@@ -200,13 +202,13 @@ article.post {
   will-change: transform;
   /* Pre-center slide 0 via CSS so the view-transition snapshot is already
      correct before snapCenter() runs. Formula: (viewport - 2*padding - slideW) / 2
-     Desktop: (100vw - 72px - 520px) / 2 = 50vw - 296px */
-  transform: translateX(calc(50vw - 296px));
+     Desktop: (100vw - 72px - slideW) / 2 */
+  transform: translateX(calc(50vw - 36px - var(--photo-width) / 2));
 }
 
 .post .slideshow .slide {
   flex: 0 0 auto;
-  width: min(520px, 90vw);
+  width: min(var(--photo-width), 90vw);
   cursor: pointer;
   opacity: 0.55;
   transform: scale(0.97);
@@ -324,9 +326,9 @@ article.post {
     padding: 0 28px;
   }
 
-  /* Mobile (578px–720px): padding=28px, slide=520px → (100vw - 56px - 520px) / 2 = 50vw - 288px */
+  /* Mobile (578px–720px): padding=28px → (100vw - 56px - slideW) / 2 */
   .post .slideshow-track {
-    transform: translateX(calc(50vw - 288px));
+    transform: translateX(calc(50vw - 28px - var(--photo-width) / 2));
   }
 
   .post .slideshow-control {
