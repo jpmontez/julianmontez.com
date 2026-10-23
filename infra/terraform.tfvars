@@ -15,6 +15,7 @@ dns_records = {
 
   # Content exactly as stored by Cloudflare: SPF unquoted, the verification tokens quoted.
   spf                      = { type = "TXT", name = "@", content = "v=spf1 include:spf.messagingengine.com ?all" }
+  dmarc                    = { type = "TXT", name = "_dmarc", content = "v=DMARC1; p=reject" }
   github_pages_proof       = { type = "TXT", name = "_github-pages-challenge-jpmontez", content = "\"1fe32baa3d5d88c404da972571154b\"" }
   google_site_verification = { type = "TXT", name = "@", content = "\"google-site-verification=mfH-SpFw8H8tD2xdL--42buMEWw6AUY0asHqDXW1D10\"", ttl = 3600 }
 }
