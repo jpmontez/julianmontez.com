@@ -244,7 +244,7 @@ header.site a {
 
 /* No newer or older photo: the end is plain text, lighter than the links */
 .photo-page footer nav > span:not(.center) {
-  color: var(--rule);
+  color: var(--muted);
 }
 
 /* Desktop reaches the contact sheet through the photo's top third */
@@ -451,7 +451,7 @@ header.site a {
 
 /* First or last sheet: the end is plain text, lighter than the links */
 .sheet-page footer nav > span:not(.count) {
-  color: var(--rule);
+  color: var(--muted);
 }
 
 .sheet-page footer .close {

@@ -71,7 +71,7 @@ src/styles/
 **Key architectural facts:**
 - `src/styles/theme.css` is the single stylesheet — imported globally via BaseLayout
 - Post titles are intentionally hidden in rendered output; visible only in metadata/feeds
-- Every post is exactly one photo (`images` has `.max(1)`); order is newest first, same-day posts by file name descending. "Next" goes older; the ends show light grey text (#e4e4e4) instead of wrapping
+- Every post is exactly one photo (`images` has `.max(1)`); order is newest first, same-day posts by file name descending. "Next" goes older; the ends show grey text (#6b6b6b) instead of wrapping
 - Three plain `<a href>` click zones overlay the photo (box sized to the image): top third → its contact sheet frame (`?from=` + `#frame-N`), bottom-left → Previous, bottom-right → Next. On desktop, hovering/focusing the top third reveals a grey "Contact sheet" label centred in the header (`.zone-label`, BaseLayout `sheetLabel`); phones get a "Contact sheet" link in the bottom nav instead. Navigation works without JS; the inline script only adds arrow keys, swipe left/right on touch screens, and preloads the next image
 - The photo `<img>` gets an explicit CSS width from inline `--w`/`--ratio` matching `photoSizes()`, so its box is final before the image loads (no layout shift)
 - The photo page's LCP preload is AVIF-only and uses `imageSrcsets()` + `photoSizes()` so its URLs match the `<picture>` exactly. `photoSizes()` must match the `.photo img` max-width/max-height in `theme.css`
@@ -81,7 +81,7 @@ src/styles/
 - Images in `src/assets/photos/` are processed by Astro's sharp pipeline at build time
 - Deploys use Wrangler, not `cf`, until [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed. Don't add `@astrojs/cloudflare`: it moves output to `dist/client/` and adds a Worker script plus session KV and Images binding defaults this static site doesn't need
 
-**Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (16px at ≥1600px, 17px at ≤600px); colors #fff, #000, #6b6b6b (secondary), #e4e4e4 (rules, dead-end nav text) and nothing else. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
+**Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (16px at ≥1600px, 17px at ≤600px); colors #fff, #000, #6b6b6b (secondary, dead-end nav text), #e4e4e4 (rules only; fails contrast as text) and nothing else. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
 
 ## Content Format
 
