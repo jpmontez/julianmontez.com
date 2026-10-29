@@ -22,13 +22,17 @@ const href = (p: CollectionEntry<'posts'>) => `/${postSlug(p)}/`;
 
 const isHome = Astro.url.pathname === '/';
 const isoDate = date.toISOString().slice(0, 10);
-const pageTitle = `${caption(post.data)} – ${siteConfig.title}`;
+// The homepage keeps one title for search; it would otherwise repeat the newest photo's
+const pageTitle = isHome ? `${siteConfig.title} – Portfolio` : `${caption(post.data)} – ${siteConfig.title}`;
+// The caption heads each photo page; on / the site name in the header is the h1
+const CaptionTag = isHome ? 'span' : 'h1';
 const pageDescription = postDescription(post.data);
 const canonicalUrl = new URL(href(post), Astro.site).href;
 const sizes = photoSizes(image.src);
 const { avif, webp, native, fallback } = await imageSrcsets(image.src);
 const nextSet = next && (await imageSrcsets(next.data.images[0].src));
-const ogImage = await getImage({ src: image.src, width: 1080, format: 'jpg' });
+// 1200px wide: the minimum for large previews in Google Discover
+const ogImage = await getImage({ src: image.src, width: 1200, format: 'jpg' });
 
 // Photographer credit for image search. The build strips EXIF/IPTC from the files, so it's declared here.
 // contentUrl is the <img>'s fallback src, the URL search engines index.
@@ -42,7 +46,12 @@ const sheetHref = `/contact-sheet/${sheetOf(index)}/?from=${postSlug(post)}#fram
   pageDescription={isHome ? undefined : pageDescription}
   canonicalUrl={isHome ? undefined : canonicalUrl}
   ogType={isHome ? 'website' : 'article'}
-  ogImageUrl={new URL(ogImage.src, Astro.site).href}
+  ogImage={{
+    src: new URL(ogImage.src, Astro.site).href,
+    width: Number(ogImage.attributes.width),
+    height: Number(ogImage.attributes.height),
+    alt: image.alt,
+  }}
   preloadSrcset={avif}
   preloadSizes={sizes}
   pageClass="photo-page"
@@ -55,19 +64,32 @@ const sheetHref = `/contact-sheet/${sheetOf(index)}/?from=${postSlug(post)}#fram
       type="application/ld+json"
       set:html={JSON.stringify({
         '@context': 'https://schema.org',
-        '@type': 'BlogPosting',
-        headline: caption(post.data),
-        image: {
-          '@type': 'ImageObject',
-          contentUrl: new URL(fallback, Astro.site).href,
-          creator: author,
-          creditText: siteConfig.author,
-          copyrightNotice: `© ${date.getUTCFullYear()} ${siteConfig.author}`,
-        },
-        datePublished: isoDate,
-        author,
-        description: pageDescription,
-        mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+        '@graph': [
+          {
+            '@type': 'BlogPosting',
+            headline: caption(post.data),
+            image: {
+              '@type': 'ImageObject',
+              contentUrl: new URL(fallback, Astro.site).href,
+              creator: author,
+              creditText: siteConfig.author,
+              copyrightNotice: `© ${date.getUTCFullYear()} ${siteConfig.author}`,
+            },
+            datePublished: isoDate,
+            author,
+            description: pageDescription,
+            mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+          },
+          // Search results show "Julian Montez › Index › <place>" instead of the /YYYY/MM/dsc-NNNN path
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: siteConfig.title, item: Astro.site!.href },
+              { '@type': 'ListItem', position: 2, name: 'Index', item: new URL('/index/', Astro.site).href },
+              { '@type': 'ListItem', position: 3, name: title ?? fullDate(date) },
+            ],
+          },
+        ],
       })}
     />
   )}
@@ -96,7 +118,7 @@ const sheetHref = `/contact-sheet/${sheetOf(index)}/?from=${postSlug(post)}#fram
         {next && <a class="zone zone-next" href={href(next)} aria-label="Next photo"></a>}
       </div>
       <figcaption>
-        {title && `${title}, `}<time datetime={isoDate}>{fullDate(date)}</time>
+        <CaptionTag>{title && `${title}, `}<time datetime={isoDate}>{fullDate(date)}</time></CaptionTag>
       </figcaption>
     </figure>
   </main>
@@ -128,13 +150,31 @@ const sheetHref = `/contact-sheet/${sheetOf(index)}/?from=${postSlug(post)}#fram
   </footer>
 
   <script is:inline>
+    const go = (rel) => {
+      const link = document.querySelector(`.photo-page footer a[rel="${rel}"]`);
+      if (link) location.href = link.href;
+    };
     document.addEventListener('keydown', (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented) return;
       if (e.target.closest('input, textarea, select, [contenteditable]')) return;
       const rel = { ArrowLeft: 'prev', ArrowRight: 'next' }[e.key];
-      const link = rel && document.querySelector(`.photo-page footer a[rel="${rel}"]`);
-      if (link) location.href = link.href;
+      if (rel) go(rel);
     });
+    // Swipe left for the next (older) photo, right for the previous one: one finger, mostly sideways,
+    // at least 50px. Pinches and swipes while zoomed in are left to the browser.
+    let swipeStart = null;
+    document.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      swipeStart = e.touches.length === 1 && !(visualViewport?.scale > 1) ? { x: t.clientX, y: t.clientY } : null;
+    }, { passive: true });
+    document.addEventListener('touchend', (e) => {
+      if (!swipeStart || e.touches.length) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - swipeStart.x;
+      const dy = t.clientY - swipeStart.y;
+      swipeStart = null;
+      if (Math.abs(dx) >= 50 && Math.abs(dx) > 2 * Math.abs(dy)) go(dx < 0 ? 'next' : 'prev');
+    }, { passive: true });
     // Warm the cache with the next photo in the format this browser picked for the current one
     const nextLink = document.querySelector('.photo-page footer a[rel="next"]');
     const current = document.querySelector('.photo img');

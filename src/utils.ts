@@ -4,6 +4,13 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 import { siteConfig } from './config';
 import { photoPath } from './slug.mjs';
 
+// Cloudflare Email Obfuscation doesn't apply to Worker responses, so the address ships XOR-encoded
+// (data-email) and BaseLayout's inline script turns it into a mailto: link in the browser.
+export const emailKey = 0x5a;
+export const encodedEmail = Array.from(siteConfig.email, (c) =>
+  (c.charCodeAt(0) ^ emailKey).toString(16).padStart(2, '0')
+).join('');
+
 export async function getPosts() {
   const posts = await getCollection('posts');
   // Newest first; same-day posts by file name, descending, so their order never shifts between builds
@@ -68,11 +75,11 @@ const WIDTHS = [640, 960, 1280, 1600, 1920, 2560];
 const MAX_WIDTH = WIDTHS.at(-1)!;
 
 // Rendered width of a photo: full width inside the 16px gutters on phones; on desktop the narrower of
-// the column (100vw - 64px padding) and the height cap (100vh - 164px) times the photo's aspect ratio.
+// the column (100vw - 64px padding) and the height cap (100vh - 166px) times the photo's aspect ratio.
 // Must match .photo img in theme.css.
 export function photoSizes(image: ImageMetadata) {
   const ratio = (image.width / image.height).toFixed(4);
-  return `(max-width: 600px) calc(100vw - 32px), min(calc(100vw - 64px), calc((100vh - 164px) * ${ratio}))`;
+  return `(max-width: 600px) calc(100vw - 32px), min(calc(100vw - 64px), calc((100vh - 166px) * ${ratio}))`;
 }
 
 // Thumbnails at 2×+ of their slot: 144px for the index's 48px rows, 224px for the contact sheet's 112px boxes

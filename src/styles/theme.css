@@ -21,6 +21,14 @@ body {
   line-height: 1.4;
 }
 
+/* One size up on wide screens, where 15px reads small beside a large photo. The photo's 166px height
+   reserve (.photo img, photoSizes()) covers the taller 16px header and footer lines. */
+@media (min-width: 1600px) {
+  body {
+    font-size: 16px;
+  }
+}
+
 h1,
 h2 {
   margin: 0;
@@ -188,10 +196,10 @@ header.site a {
    (--w and --ratio set inline from the original) sizes the box before the image loads, so nothing shifts. */
 .photo img {
   display: block;
-  width: min(var(--w), calc(100vw - 64px), calc((100svh - 164px) * var(--ratio)));
+  width: min(var(--w), calc(100vw - 64px), calc((100svh - 166px) * var(--ratio)));
   height: auto;
   max-width: calc(100vw - 64px);
-  max-height: calc(100svh - 164px);
+  max-height: calc(100svh - 166px);
 }
 
 /* Caption and nav share the 12px padding, so their baselines line up at the bottom of the row */
@@ -234,6 +242,11 @@ header.site a {
   color: var(--ink);
 }
 
+/* No newer or older photo: the end is plain text, lighter than the links */
+.photo-page footer nav > span:not(.center) {
+  color: var(--rule);
+}
+
 /* Desktop reaches the contact sheet through the photo's top third */
 .photo-page footer .sheet-link {
   display: none;
@@ -248,14 +261,27 @@ header.site a {
   padding-block: var(--tap-pad);
 }
 
-/* ─── Index page ─────────────────────────────────────────────────── */
-.index-page {
+/* ─── Index and Info pages ───────────────────────────────────────── */
+.index-page,
+.info-page {
   padding: 24px 32px;
 }
 
-.index-page main {
+.index-page main,
+.info-page main {
   max-width: 1040px;
   margin-top: 72px;
+}
+
+.info-page p {
+  margin: 0;
+}
+
+/* 44px tap target; the negative margin keeps its line as tall as the two above */
+.info-page main a {
+  display: inline-block;
+  padding-block: var(--tap-pad);
+  margin-block: calc(-1 * var(--tap-pad));
 }
 
 .index-page .year {
@@ -423,6 +449,11 @@ header.site a {
   color: var(--ink);
 }
 
+/* First or last sheet: the end is plain text, lighter than the links */
+.sheet-page footer nav > span:not(.count) {
+  color: var(--rule);
+}
+
 .sheet-page footer .close {
   margin-left: 20px;
 }
@@ -487,14 +518,15 @@ header.site a {
     gap: 0;
   }
 
+  /* 12px, not 20px: at 320px wide the row has 288px and needs 273px, so nothing wraps */
   .photo-page footer nav > :first-child {
     justify-self: start;
-    padding-right: 20px;
+    padding-right: 12px;
   }
 
   .photo-page footer nav > :last-child {
     justify-self: end;
-    padding-left: 20px;
+    padding-left: 12px;
   }
 
   .photo-page footer .sheet-link {
@@ -509,11 +541,13 @@ header.site a {
     padding: 4px 16px 12px;
   }
 
-  .index-page {
+  .index-page,
+  .info-page {
     padding: 4px 16px 12px;
   }
 
-  .index-page main {
+  .index-page main,
+  .info-page main {
     margin-top: 32px;
   }
 

@@ -5,11 +5,13 @@
 - After deploy, check `/page/2/` redirects to `/index/` and an old photo URL (e.g. `/2026/02/2026-02-21-photos/`) redirects to its new one (Workers `_redirects`).
 - Optional: drop Cloudflare Web Analytics if unused (delete `infra/analytics.tf`); its `beacon.min.js` is the only remaining "legacy JavaScript" / short-cache flag in PageSpeed Insights.
 
+- Test swipe on a real iPhone and Android phone: a swipe from the screen edge (the browser's own back gesture) shouldn't also open the previous photo.
+
 ## SEO
 
 - Link back to the site from the Instagram and GitHub profiles listed in `sameAs` (`src/config.ts`).
 - Search Console: submit `sitemap-index.xml`; check Pages → "Crawled – currently not indexed". Import the site into Bing Webmaster Tools.
-- After deploy, run Google's Rich Results Test on a photo URL and the homepage.
+- After deploy, run Google's Rich Results Test on a photo URL (BlogPosting and BreadcrumbList) and the homepage.
 
 ## Cloudflare
 

@@ -49,9 +49,9 @@ src/content/posts/      → Markdown posts with YAML front matter
 src/assets/photos/      → full-resolution source images (processed at build time)
 src/config.ts           → site config (title, email, description, feed size)
 src/slug.mjs            → photoPath: post file name → URL path (shared by utils.ts and astro.config.mjs sitemap dates)
-src/utils.ts            → getPosts, postSlug, fullDate/shortDate, caption, dateline, postDescription, imageSrcsets, photoSizes, thumbnail
+src/utils.ts            → getPosts, postSlug, fullDate/shortDate, caption, dateline, postDescription, imageSrcsets, photoSizes, thumbnail, emailKey/encodedEmail
 src/layouts/
-  BaseLayout.astro      → base HTML layout (meta, OG, preload, feed link, skip link, header with Index/Email)
+  BaseLayout.astro      → base HTML layout (meta, OG, preload, feed link, skip link, header with Index/Info/Email)
 src/components/
   PhotoPage.astro       → photo page: one photo, caption, Previous/n of total/Next, arrow keys, next-image preload
   ContactSheet.astro    → contact sheet: numbered thumbnail grid, label, Previous/Sheet n of N/Next/Close, ?from= and keys
@@ -59,6 +59,7 @@ src/pages/
   404.astro             → not-found page (assets notFoundHandling: 404-page)
   index.astro           → newest photo (PhotoPage)
   index/index.astro     → /index/: every photo grouped by year, with thumbnails
+  info.astro            → /info/: birth year and place, where based, email
   [...slug].astro       → each photo's page at /YYYY/MM/dsc-0391/ (PhotoPage; the whole path comes from the post's file name, never from `date:`)
   contact-sheet/[sheet].astro → /contact-sheet/N/: 36 frames per sheet (ContactSheet)
   feed.xml.ts           → RSS feed
@@ -70,16 +71,17 @@ src/styles/
 **Key architectural facts:**
 - `src/styles/theme.css` is the single stylesheet — imported globally via BaseLayout
 - Post titles are intentionally hidden in rendered output; visible only in metadata/feeds
-- Every post is exactly one photo (`images` has `.max(1)`); order is newest first, same-day posts by file name descending. "Next" goes older; the ends show grey text instead of wrapping
-- Three plain `<a href>` click zones overlay the photo (box sized to the image): top third → its contact sheet frame (`?from=` + `#frame-N`), bottom-left → Previous, bottom-right → Next. On desktop, hovering/focusing the top third reveals a grey "Contact sheet" label centred in the header (`.zone-label`, BaseLayout `sheetLabel`); phones get a "Contact sheet" link in the bottom nav instead. Navigation works without JS; the inline script only adds arrow keys and preloads the next image
+- Every post is exactly one photo (`images` has `.max(1)`); order is newest first, same-day posts by file name descending. "Next" goes older; the ends show light grey text (#e4e4e4) instead of wrapping
+- Three plain `<a href>` click zones overlay the photo (box sized to the image): top third → its contact sheet frame (`?from=` + `#frame-N`), bottom-left → Previous, bottom-right → Next. On desktop, hovering/focusing the top third reveals a grey "Contact sheet" label centred in the header (`.zone-label`, BaseLayout `sheetLabel`); phones get a "Contact sheet" link in the bottom nav instead. Navigation works without JS; the inline script only adds arrow keys, swipe left/right on touch screens, and preloads the next image
 - The photo `<img>` gets an explicit CSS width from inline `--w`/`--ratio` matching `photoSizes()`, so its box is final before the image loads (no layout shift)
 - The photo page's LCP preload is AVIF-only and uses `imageSrcsets()` + `photoSizes()` so its URLs match the `<picture>` exactly. `photoSizes()` must match the `.photo img` max-width/max-height in `theme.css`
 - `/page/*` (the old paginated feed) redirects to `/index/` via `public/_redirects`
-- The header email link ships XOR-encoded (`data-email`) and a tiny inline script in `BaseLayout.astro` builds the `mailto:` in the browser. Cloudflare Email Obfuscation doesn't apply to Worker responses, so never render the address as plain text anywhere in the HTML
+- Email links ship XOR-encoded (`data-email`, from `utils.ts`) and a tiny inline script in `BaseLayout.astro` builds the `mailto:` in the browser; `data-email-text` also makes the link show the address (Info page). Cloudflare Email Obfuscation doesn't apply to Worker responses, so never render the address as plain text anywhere in the HTML
+- Favicon: `public/favicon.png` is a 96px "JM" in Times New Roman Bold (Google needs a square that's a multiple of 48px); `public/apple-touch-icon.png` is 180px in Regular. Both are rendered from the font outlines, not screenshots
 - Images in `src/assets/photos/` are processed by Astro's sharp pipeline at build time
 - Deploys use Wrangler, not `cf`, until [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed. Don't add `@astrojs/cloudflare`: it moves output to `dist/client/` and adds a Worker script plus session KV and Images binding defaults this static site doesn't need
 
-**Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (17px at ≤600px); colors #fff, #000, #6b6b6b (secondary), #e4e4e4 (rules) and nothing else. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
+**Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (16px at ≥1600px, 17px at ≤600px); colors #fff, #000, #6b6b6b (secondary), #e4e4e4 (rules, dead-end nav text) and nothing else. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
 
 ## Content Format
 
