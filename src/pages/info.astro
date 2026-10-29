@@ -1,0 +1,22 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfig } from '../config';
+import { encodedEmail } from '../utils';
+---
+
+<BaseLayout
+  pageTitle={`Info – ${siteConfig.title}`}
+  pageDescription={`${siteConfig.author}, born 1992 in San Antonio, Texas, based in Brooklyn, New York.`}
+  current="info"
+  pageClass="info-page"
+>
+  <main id="main">
+    <h1 class="visually-hidden">Info</h1>
+    <p>
+      b. 1992 San Antonio, Texas<br />
+      Based in Brooklyn, New York<br />
+      {/* BaseLayout's script swaps in the address; it's never plain text in the HTML */}
+      <a data-email={encodedEmail} data-email-text>Email</a>
+    </p>
+  </main>
+</BaseLayout>

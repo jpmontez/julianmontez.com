@@ -1,17 +1,18 @@
 ---
 import '../styles/theme.css';
 import { siteConfig } from '../config';
+import { emailKey, encodedEmail } from '../utils';
 
 interface Props {
   pageTitle: string;
   pageDescription?: string;
   canonicalUrl?: string;
   ogType?: string;
-  ogImageUrl?: string;
+  ogImage?: { src: string; width: number; height: number; alt: string };
   preloadSrcset?: string;
   preloadSizes?: string;
   // Marks the matching header link with aria-current="page"
-  current?: 'index';
+  current?: 'index' | 'info';
   // Template class on the page wrapper: "photo-page" or "index-page"
   pageClass?: string;
   // Centre header slot that names the photo's top-third click zone while it's hovered or focused
@@ -23,7 +24,7 @@ const {
   pageDescription = siteConfig.description,
   canonicalUrl = Astro.url.href,
   ogType = 'website',
-  ogImageUrl,
+  ogImage,
   preloadSrcset,
   preloadSizes,
   current,
@@ -33,13 +34,6 @@ const {
 
 const isHome = Astro.url.pathname === '/';
 const TitleTag = isHome ? 'h1' : 'span';
-
-// Cloudflare Email Obfuscation doesn't apply to Worker responses, so the address ships
-// XOR-encoded and the inline script below turns it into a mailto: link in the browser.
-const emailKey = 0x5a;
-const encodedEmail = Array.from(siteConfig.email, (c) =>
-  (c.charCodeAt(0) ^ emailKey).toString(16).padStart(2, '0')
-).join('');
 ---
 
 <!doctype html>
@@ -57,13 +51,23 @@ const encodedEmail = Array.from(siteConfig.email, (c) =>
     <meta property="og:description" content={pageDescription} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:type" content={ogType} />
-    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
-    <meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+    {ogImage && (
+      <>
+        <meta property="og:image" content={ogImage.src} />
+        <meta property="og:image:width" content={String(ogImage.width)} />
+        <meta property="og:image:height" content={String(ogImage.height)} />
+        <meta property="og:image:alt" content={ogImage.alt} />
+      </>
+    )}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
-    {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+    {ogImage && <meta name="twitter:image" content={ogImage.src} />}
+    {ogImage && <meta name="twitter:image:alt" content={ogImage.alt} />}
     <link rel="alternate" type="application/rss+xml" title={siteConfig.title} href="/feed.xml" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    {/* JM monogram, Times New Roman Bold: 96px (a multiple of 48, as Google requires); browsers scale it to tab size */}
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     {/* AVIF only: an untyped fallback preload would also be fetched by AVIF-capable browsers,
         downloading the LCP image twice. Browsers without AVIF simply skip the preload. */}
     {preloadSrcset && (
@@ -99,6 +103,7 @@ const encodedEmail = Array.from(siteConfig.email, (c) =>
         {sheetLabel && <span class="zone-label" aria-hidden="true">Contact sheet</span>}
         <nav aria-label="Site">
           <a href="/index/" aria-current={current === 'index' ? 'page' : undefined}>Index</a>
+          <a href="/info/" aria-current={current === 'info' ? 'page' : undefined}>Info</a>
           <a data-email={encodedEmail}>Email</a>
         </nav>
       </header>
@@ -107,7 +112,10 @@ const encodedEmail = Array.from(siteConfig.email, (c) =>
     </div>
     <script is:inline define:vars={{ emailKey }}>
       for (const a of document.querySelectorAll('a[data-email]')) {
-        a.href = 'mailto:' + a.dataset.email.replace(/../g, (h) => String.fromCharCode(parseInt(h, 16) ^ emailKey));
+        const address = a.dataset.email.replace(/../g, (h) => String.fromCharCode(parseInt(h, 16) ^ emailKey));
+        a.href = 'mailto:' + address;
+        // data-email-text: the link shows the address itself (Info page)
+        if ('emailText' in a.dataset) a.textContent = address;
       }
     </script>
   </body>

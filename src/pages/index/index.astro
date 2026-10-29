@@ -18,9 +18,16 @@ const years = new Map<number, typeof entries>();
 for (const entry of entries) years.set(entry.year, [...(years.get(entry.year) ?? []), entry]);
 // Only the rows visible on first paint load eagerly
 const EAGER = 6;
+// "2015–2026", oldest to newest
+const span = `${entries.at(-1)!.year}–${entries[0].year}`;
 ---
 
-<BaseLayout pageTitle={`Index – ${siteConfig.title}`} current="index" pageClass="index-page">
+<BaseLayout
+  pageTitle={`All photographs, ${span} – ${siteConfig.title}`}
+  pageDescription={`Every photograph by ${siteConfig.author}, ${span}, by year and place.`}
+  current="index"
+  pageClass="index-page"
+>
   <main id="main">
     <h1 class="visually-hidden">Index</h1>
     {[...years].map(([year, items]) => (

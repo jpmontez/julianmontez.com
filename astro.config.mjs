@@ -14,6 +14,8 @@ export default defineConfig({
   site: 'https://julianmontez.com',
   integrations: [
     sitemap({
+      // Contact sheets are noindex (ContactSheet.astro)
+      filter: (page) => !new URL(page).pathname.startsWith('/contact-sheet/'),
       // Photo pages get their post's date as lastmod
       serialize(item) {
         const date = photoDates.get(new URL(item.url).pathname);

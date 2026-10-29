@@ -38,6 +38,8 @@ const EAGER = 4;
   canonicalUrl={new URL(sheetHref(sheet), Astro.site).href}
   pageClass="sheet-page"
 >
+  {/* Thumbnails without text, and /index/ already lists every photo: kept out of search, links still followed */}
+  <meta slot="head" name="robots" content="noindex, follow" />
   {/* Phone shows this under the header; desktop moves it to the footer row */}
   <p class="sheet-label">Contact sheet, {range}</p>
   <main id="main">
