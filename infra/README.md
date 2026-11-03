@@ -8,8 +8,8 @@ plan.
 ## Architecture
 
 ```
-GitHub push ─► Actions ─┬─ validate: bun install --frozen-lockfile, astro check, astro build
-                        ├─ deploy:   bun run deploy (wrangler) ─► assets-only Worker + custom domain
+GitHub push ─► Actions ─┬─ validate: npm ci, astro check, astro build
+                        ├─ deploy:   npm run deploy (wrangler) ─► assets-only Worker + custom domain
                         └─ infra:    tofu fmt/validate/plan  ─► read-only drift check (no apply in CI)
 
 Laptop ─────────────────── tofu apply ─► zone, DNS, zone settings, redirects, WAF, bots, Web Analytics
@@ -20,7 +20,7 @@ tools ([Cloudflare's guidance](https://developers.cloudflare.com/terraform/advan
 
 | Owner | Resources | Source of truth |
 |---|---|---|
-| Wrangler (`bun run deploy`) | Worker, its static assets, its custom domain and the DNS record Cloudflare creates for that domain | `wrangler.jsonc` + `WORKER_NAME`/`SITE_DOMAIN` |
+| Wrangler (`npm run deploy`) | Worker, its static assets, its custom domain and the DNS record Cloudflare creates for that domain | `wrangler.jsonc` + `WORKER_NAME`/`SITE_DOMAIN` |
 | OpenTofu (this directory) | Zone, all other DNS records, zone settings, www→apex redirect rule, WAF custom rules, Bot Fight Mode, Web Analytics site | `*.tf` + `terraform.tfvars` |
 
 | File | Contents |
@@ -48,7 +48,7 @@ Nothing below goes into a committed file. Locally, keep them in the gitignored
 | Variable | Secret? | Purpose |
 |---|---|---|
 | `CLOUDFLARE_API_TOKEN` | yes | API token for the provider. Read-only for `plan`; edit rights (see below) for `apply` |
-| `TF_VAR_account_id` | no | Cloudflare account ID (dashboard → any zone → Overview, or `bunx cf accounts list`) |
+| `TF_VAR_account_id` | no | Cloudflare account ID (dashboard → any zone → Overview, or `npx cf accounts list`) |
 | `TF_VAR_zone_name` | no | Apex domain, e.g. `example.com`. CI maps it from the `SITE_DOMAIN` repository variable |
 | `TF_VAR_state_passphrase` | yes | ≥ 16 characters; encrypts state and plan files. Store it in a password manager |
 
@@ -86,7 +86,7 @@ Use this when the zone already exists and was configured in the dashboard.
    cf-terraforming generate --zone "$ZONE_ID" --resource-type cloudflare_ruleset
    cf-terraforming generate --account "$TF_VAR_account_id" --resource-type cloudflare_web_analytics_site
    ```
-   `bunx cf dns records list` gives the same record IDs as JSON.
+   `npx cf dns records list` gives the same record IDs as JSON.
 2. Translate the output into `terraform.tfvars` (records into `dns_records`) and a temporary
    `imports.tf` with one `import` block per existing resource, e.g.:
    ```hcl
@@ -239,7 +239,7 @@ No modules.
 | zone\_name | Apex domain of the site, e.g. example.com. CI sets it from the SITE\_DOMAIN repository variable via TF\_VAR\_zone\_name. | `string` | n/a | yes |
 | bot\_fight\_mode | Bot Fight Mode (Security → Settings). It cannot be skipped by WAF custom rules, so leave it<br/>off when custom rules exempt feeds and verified bots. Other bot settings are left as-is. | `bool` | `false` | no |
 | bot\_settings | Other bot settings to pin; null leaves a setting unmanaged. Values:<br/>ai\_bots\_protection "block" \| "disabled" \| "only\_on\_ad\_pages" (Block AI bots);<br/>crawler\_protection "enabled" \| "disabled" (AI Labyrinth);<br/>ai\_training: robots.txt policy for AI training crawlers (e.g. "disallow");<br/>enable\_js: invisible JavaScript detections. | <pre>object({<br/>    ai_bots_protection = optional(string)<br/>    crawler_protection = optional(string)<br/>    ai_training        = optional(string)<br/>    enable_js          = optional(bool)<br/>  })</pre> | `{}` | no |
-| dns\_records | DNS records to manage, keyed by a stable label of your choice. `name` is relative<br/>to the zone ("@" for the apex). Do not list the apex record for the site itself:<br/>the Worker custom domain (owned by Wrangler, `bun run deploy`) creates it. | <pre>map(object({<br/>    type     = string<br/>    name     = string<br/>    content  = string<br/>    ttl      = optional(number, 1) # 1 = automatic<br/>    proxied  = optional(bool, false)<br/>    priority = optional(number)<br/>    comment  = optional(string)<br/>  }))</pre> | `{}` | no |
+| dns\_records | DNS records to manage, keyed by a stable label of your choice. `name` is relative<br/>to the zone ("@" for the apex). Do not list the apex record for the site itself:<br/>the Worker custom domain (owned by Wrangler, `npm run deploy`) creates it. | <pre>map(object({<br/>    type     = string<br/>    name     = string<br/>    content  = string<br/>    ttl      = optional(number, 1) # 1 = automatic<br/>    proxied  = optional(bool, false)<br/>    priority = optional(number)<br/>    comment  = optional(string)<br/>  }))</pre> | `{}` | no |
 | waf\_custom\_rules | WAF custom rules, evaluated in list order. Free plan: at most 5 rules.<br/>`skip_remaining_custom_rules` (ruleset "current"), `skip_phases`, `skip_products` and<br/>`logging` apply only when `action = "skip"`. | <pre>list(object({<br/>    description                 = string<br/>    expression                  = string<br/>    action                      = string<br/>    enabled                     = optional(bool, true)<br/>    logging                     = optional(bool, true)<br/>    skip_remaining_custom_rules = optional(bool, false)<br/>    skip_phases                 = optional(list(string))<br/>    skip_products               = optional(list(string))<br/>  }))</pre> | `[]` | no |
 | zone\_settings | Zone settings to pin, as { setting\_id = value }, e.g. { ssl = "strict", min\_tls\_version = "1.2" }.<br/>List only settings that differ from Cloudflare's defaults. Setting IDs:<br/>https://developers.cloudflare.com/api/resources/zones/subresources/settings/ | `any` | `{}` | no |
 

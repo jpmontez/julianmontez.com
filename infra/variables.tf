@@ -12,7 +12,7 @@ variable "dns_records" {
   description = <<-EOT
     DNS records to manage, keyed by a stable label of your choice. `name` is relative
     to the zone ("@" for the apex). Do not list the apex record for the site itself:
-    the Worker custom domain (owned by Wrangler, `bun run deploy`) creates it.
+    the Worker custom domain (owned by Wrangler, `npm run deploy`) creates it.
   EOT
   type = map(object({
     type     = string
