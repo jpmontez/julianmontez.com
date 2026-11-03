@@ -1,11 +1,11 @@
 # julianmontez.com
 
-Static photoblog built with [Astro](https://astro.build). Deployed to Cloudflare Workers static assets with Wrangler; the rest of the Cloudflare setup (zone, DNS, settings, redirects, WAF, bot settings, analytics) is code in [`infra/`](infra/README.md). Everything runs on Cloudflare's free plan.
+Static photoblog built with [Astro](https://astro.build). Deployed to Cloudflare Workers static assets with [`cf`](https://github.com/cloudflare/cf); the rest of the Cloudflare setup (zone, DNS, settings, redirects, WAF, bot settings, analytics) is code in [`infra/`](infra/README.md). Everything runs on Cloudflare's free plan.
 
 ## Requirements
 
 - **Node.js 26 LTS.** Pinned once in `package.json` (`engines.node`), and `.npmrc` sets `engine-strict=true`, so `npm install` fails on any other major. CI reads the same pin. On macOS: `brew install node`.
-- **No global npm packages.** Build and deploy tools are pinned devDependencies run through npm scripts or `npx`. `cf` (inspection only) isn't installed; `npx cf …` fetches it on demand.
+- **No global npm packages.** Build and deploy tools are pinned devDependencies run through npm scripts or `npx`. `cf` is one of them, so `npx cf …` runs the pinned version.
 - **Infrastructure tools** (only to change the Cloudflare setup): `brew install opentofu terraform-docs` and, to adopt an existing zone, `brew install cloudflare/cloudflare/cf-terraforming`.
 
 ## Quick Start
@@ -13,7 +13,7 @@ Static photoblog built with [Astro](https://astro.build). Deployed to Cloudflare
 ```bash
 npm install
 npx astro dev        # dev server at http://localhost:4321
-npx astro build      # build to dist/
+npx astro build      # build to .cloudflare/output/
 npx astro check      # type-check
 ```
 
@@ -44,7 +44,7 @@ scripts/
   import_lightroom.py  # import Lightroom JPG exports
   test_import_lightroom.py  # self-check: uv run scripts/test_import_lightroom.py
 infra/                 # OpenTofu config for the Cloudflare zone (see infra/README.md)
-wrangler.jsonc         # assets-only Worker config (name and domain come from env at deploy)
+cloudflare.config.ts   # assets-only Worker config for cf (name and domain come from env at deploy)
 astro.config.mjs       # Astro config
 .env.example           # local environment variables template
 ```
@@ -79,18 +79,18 @@ Imports files matching `YYYYMMDD-DSC_NNNN.jpg` or `YYYYMMDD-DSCFNNNN.jpg` (an op
 
 How it fits together:
 
-- **Site:** `npm run deploy` runs `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`, uploading the static `dist/` to an assets-only Worker (no script, so no invocations to count) and attaching the custom domain. `wrangler.jsonc` sets trailing-slash handling and serves `404.html` for unknown URLs. `cf` (run on demand with `npx cf …`) is for inspection and admin; it will take over deploys once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) (Astro projects can't `cf deploy`) is fixed.
+- **Site:** `npm run deploy` runs `cf deploy`, which builds through the `@astrojs/cloudflare` adapter (a pinned beta; the first release that supports `cf`) and uploads the static pages to an assets-only Worker (no script, so no invocations to count), attaching the custom domain. `cloudflare.config.ts` takes the Worker name and domain from `WORKER_NAME`/`SITE_DOMAIN`, sets trailing-slash handling and serves `404.html` for unknown URLs. `cf` also handles inspection and admin (`npx cf …`).
 - **Everything else on the zone:** DNS, zone settings, the www→apex redirect, WAF custom rules, Bot Fight Mode and Web Analytics are OpenTofu in [`infra/`](infra/README.md). `tofu apply` is run locally; CI only checks for drift.
 
-Each resource has one owner: Wrangler owns the Worker, its assets, its custom domain and the DNS record that domain creates; OpenTofu owns the rest.
+Each resource has one owner: `cf deploy` owns the Worker, its assets, its custom domain and the DNS record that domain creates; OpenTofu owns the rest.
 
 ### Deploy from your machine
 
 ```bash
 cp .env.example .env         # fill in the values
 set -a; source .env; set +a
-npm run build && npm run deploy
-npx cf auth whoami           # any other cf command, fetched on demand
+npm run deploy               # builds, then deploys
+npx cf auth whoami           # any other cf command
 ```
 
 ### Deploy your own
@@ -110,7 +110,7 @@ GitHub Actions (`.github/workflows/deploy.yml`):
 |---|---|---|
 | `validate` | PRs | `npm ci`, `astro check`, `astro build` |
 | `infra` | PRs and pushes | `tofu fmt -check`, `tofu validate`, terraform-docs sync check, `tofu plan -detailed-exitcode` (fails on drift; skipped when the read token isn't set, e.g. on a fresh fork). Never applies |
-| `deploy` | pushes to `main` (and manual runs on `main`) | `npm ci`, `npm run build` (includes `astro check`), `npm run deploy` (`wrangler deploy`). Independent of `infra`, so zone drift never blocks a new post |
+| `deploy` | pushes to `main` (and manual runs on `main`) | `npm ci`, `npm run build` (includes `astro check`), `npm run deploy` (`cf deploy`). Independent of `infra`, so zone drift never blocks a new post |
 
 ### Credentials setup
 
@@ -118,7 +118,7 @@ Do these in order. Nothing secret is committed anywhere: tokens live in Cloudfla
 
 #### Step 1 — Create the Cloudflare API tokens
 
-Go to **dash.cloudflare.com → My Profile (top right) → API Tokens → Create Token → Custom token → Get started**. Each permission row in the form has three dropdowns; the tables below list them left to right, exactly as labelled. Names come from Cloudflare's [API token permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/) reference; required scopes were checked against the API reference and the Wrangler source.
+Go to **dash.cloudflare.com → My Profile (top right) → API Tokens → Create Token → Custom token → Get started**. Each permission row in the form has three dropdowns; the tables below list them left to right, exactly as labelled. Names come from Cloudflare's [API token permissions](https://developers.cloudflare.com/fundamentals/api/reference/permissions/) reference; required scopes were checked against the API reference and the Wrangler source (`cf deploy` makes the same calls).
 
 For every token, set **Account Resources** to `Include` · *your account* and **Zone Resources** to `Include` · `Specific zone` · *your domain*. Never pick "All accounts" or "All zones".
 
@@ -134,13 +134,13 @@ For every token, set **Account Resources** to `Include` · *your account* and **
 | Zone | Zone WAF | Read | Read the WAF custom rules |
 | Zone | Bot Management | Read | Read Bot Fight Mode |
 
-**Token `<site>-deploy`** (e.g. `julianmontez-com-deploy`). Used by `npm run deploy` (Wrangler) in CI and locally.
+**Token `<site>-deploy`** (e.g. `julianmontez-com-deploy`). Used by `npm run deploy` (`cf deploy`) in CI and locally.
 
 | Dropdown 1 | Dropdown 2 | Dropdown 3 | Why |
 |---|---|---|---|
 | Account | Workers Scripts | Edit | Upload the Worker and its assets; attach the custom domain |
-| Zone | Zone | Read | Wrangler looks up the zone for the custom domain before deploying |
-| Zone | Workers Routes | Read | Wrangler checks no other Worker already claims that hostname |
+| Zone | Zone | Read | `cf` looks up the zone for the custom domain before deploying |
+| Zone | Workers Routes | Read | `cf` checks no other Worker already claims that hostname |
 
 **Token `<site>-tf-apply`** (e.g. `julianmontez-com-tf-apply`). Used for every local `tofu apply`; created once and kept. Never stored in GitHub; keep it in your password manager and `.env` only. Optionally restrict it under **Client IP Address Filtering** to your home IP.
 

@@ -18,7 +18,7 @@ Node 26 LTS only (`engines.node` + `engine-strict=true` in `.npmrc`); locally us
 # Install dependencies
 npm install
 
-# Build (static output in dist/)
+# Build (static output in .cloudflare/output/v0/workers/default/assets/)
 npx astro build
 
 # Preview (dev server at http://localhost:4321)
@@ -27,7 +27,7 @@ npx astro dev
 # Type check
 npx astro check
 
-# Deploy dist/ to Cloudflare Workers via wrangler (build first; needs .env loaded: set -a; source .env; set +a)
+# Build and deploy to Cloudflare Workers via `cf deploy` (needs .env loaded: set -a; source .env; set +a)
 npm run deploy
 
 # Cloudflare zone infrastructure (from infra/)
@@ -41,8 +41,8 @@ terraform-docs .        # refresh the generated section of infra/README.md
 This is an **Astro static site** — a photo-centric microblog. The build pipeline:
 
 ```
-astro.config.mjs        → Astro config (plain static output in dist/)
-wrangler.jsonc          → assets-only Worker config (dist/, trailing slashes, 404 page); name/domain passed as deploy flags from WORKER_NAME/SITE_DOMAIN
+astro.config.mjs        → Astro config (static output; @astrojs/cloudflare adapter, Sharp at build time, sessions off)
+cloudflare.config.ts    → assets-only Worker config for `cf` (trailing slashes, 404 page, custom domain); name/domain from WORKER_NAME/SITE_DOMAIN
 infra/                  → OpenTofu config for the Cloudflare zone (see infra/README.md)
 src/content.config.ts   → content collection schema (Zod) for posts
 src/content/posts/      → Markdown posts with YAML front matter
@@ -79,7 +79,7 @@ src/styles/
 - Email links ship XOR-encoded (`data-email`, from `utils.ts`) and a tiny inline script in `BaseLayout.astro` builds the `mailto:` in the browser; `data-email-text` also makes the link show the address (Info page). Cloudflare Email Obfuscation doesn't apply to Worker responses, so never render the address as plain text anywhere in the HTML
 - Favicon: `public/favicon.png` is a 96px "JM" in Times New Roman Bold (Google needs a square that's a multiple of 48px); `public/apple-touch-icon.png` is 180px in Regular. Both are rendered from the font outlines, not screenshots
 - Images in `src/assets/photos/` are processed by Astro's sharp pipeline at build time
-- Deploys use Wrangler, not `cf`, until [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed. Don't add `@astrojs/cloudflare`: it moves output to `dist/client/` and adds a Worker script plus session KV and Images binding defaults this static site doesn't need
+- Deploys use `cf deploy` through `@astrojs/cloudflare` (pinned beta, 15.0.0-beta.5: the first adapter that supports `cf`). Keep `imageService: 'custom'`, `prerenderEnvironment: 'node'` and `session: false`: otherwise the adapter swaps out Sharp and adds session KV and Images bindings this static site doesn't need. The Worker must stay assets-only (`cf deploy --dry-run` lists only `env.ASSETS`)
 
 **Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (16px at ≥1600px, 17px at ≤600px); colors #fff, #000, #6b6b6b (secondary, dead-end nav text), #e4e4e4 (rules only; fails contrast as text) and nothing else. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
 
@@ -109,10 +109,10 @@ Post bodies aren't rendered; the photo and its caption are the whole page.
 Push to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml`:
 - `validate` job (PRs only): `npm ci` + `npm run build` (`astro check` + `astro build`)
 - `infra` job (PRs and pushes): `tofu fmt -check`, `tofu validate`, terraform-docs check, `tofu plan -detailed-exitcode` as a drift check. **CI never runs `tofu apply`**; apply locally and commit the encrypted `infra/terraform.tfstate`.
-- `deploy` job (non-PR only, independent of `infra`): `npm ci` + `npm run build` + `npm run deploy` → `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`: an assets-only Worker (no script) serving `dist/` per `wrangler.jsonc`
+- `deploy` job (non-PR only, independent of `infra`): `npm ci` + `npm run build` + `npm run deploy` → `cf deploy`: an assets-only Worker (no script) per `cloudflare.config.ts`
 
 Ownership split — never manage a resource from both tools:
-- Wrangler / `wrangler.jsonc` + deploy flags: the Worker, its assets, its custom domain and the DNS record Cloudflare creates for it
-- `cf` (not installed; `npx` fetches it on demand) is for inspection/admin only (`npx cf dns records export`, `npx cf zones settings get …`)
+- `cf deploy` / `cloudflare.config.ts` + WORKER_NAME/SITE_DOMAIN: the Worker, its assets, its custom domain and the DNS record Cloudflare creates for it
+- `cf` (pinned devDependency) also handles inspection/admin (`npx cf dns records export`, `npx cf zones settings get …`)
 - OpenTofu / `infra/`: zone, all other DNS records, zone settings, www→apex redirect rule, Web Analytics
-- No personal values in `infra/*.tf` or `wrangler.jsonc`; site-specific data lives only in `infra/terraform.tfvars`, GitHub repo variables/secrets, and `.env` (gitignored)
+- No personal values in `infra/*.tf` or `cloudflare.config.ts`; site-specific data lives only in `infra/terraform.tfvars`, GitHub repo variables/secrets, and `.env` (gitignored)

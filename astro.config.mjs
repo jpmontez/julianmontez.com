@@ -1,5 +1,6 @@
 import { defineConfig, sharpImageService } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import cloudflare from '@astrojs/cloudflare';
 import { readdirSync } from 'node:fs';
 import { photoPath } from './src/slug.mjs';
 
@@ -12,6 +13,10 @@ const photoDates = new Map(
 
 export default defineConfig({
   site: 'https://julianmontez.com',
+  // Static site deployed with `cf deploy`. Keep Sharp at build time (it can't run in workerd),
+  // and no sessions, so the Worker gets no KV or Images bindings.
+  adapter: cloudflare({ imageService: 'custom', prerenderEnvironment: 'node' }),
+  session: false,
   integrations: [
     sitemap({
       // Contact sheets are noindex (ContactSheet.astro)

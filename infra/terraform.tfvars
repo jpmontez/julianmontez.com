@@ -2,7 +2,7 @@
 # zone_name, account_id and state_passphrase come from TF_VAR_* environment variables.
 
 # The apex CNAME to julianmontez-com.pages.dev is deliberately absent: at cutover
-# the Worker custom domain (owned by Wrangler, `npm run deploy`) replaces it.
+# the Worker custom domain (owned by `cf deploy`, `npm run deploy`) replaces it.
 dns_records = {
   # Fastmail DKIM
   dkim_fm1 = { type = "CNAME", name = "fm1._domainkey", content = "fm1.julianmontez.com.dkim.fmhosted.com" }

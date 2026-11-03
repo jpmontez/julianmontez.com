@@ -114,7 +114,7 @@ jobs:
       - name: Build site
         run: npm run build
 
-      # Wrangler, not `cf deploy`, until cloudflare/cf#18 is fixed
+      # cf deploy rebuilds (from the image cache) with WORKER_NAME/SITE_DOMAIN set
       - name: Deploy to Cloudflare Workers
         run: npm run deploy
         env:

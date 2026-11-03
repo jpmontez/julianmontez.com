@@ -22,5 +22,5 @@ Credentials:
 - Revoke the old Pages deploy token (Cloudflare → My Profile → API Tokens; token ID `3e3095a2…`, still active and no longer used), then archive the 1Password item `Cloudflare API Token — julianmontez.com`.
 
 Follow-ups:
-- Switch deploys from `wrangler deploy` to `cf deploy` once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed (fallback to the Wrangler assets path for detected frameworks); then replace `wrangler.jsonc` via `npx cf migrate` and re-run `cf deploy --dry-run`.
+- Move `@astrojs/cloudflare` from 15.0.0-beta.5 to the stable 15.x once released; re-run `cf deploy --dry-run` and check it still lists only `env.ASSETS`.
 - Move zone config (DNS, settings) into `cf`'s declarative config once it supports zones; drop the matching `infra/` resources.

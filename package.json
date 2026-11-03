@@ -1,12 +1,14 @@
 {
   "name": "julianmontez.com",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "astro check && astro build && node scripts/check_redirects.mjs",
-    "deploy": "wrangler deploy --name \"$WORKER_NAME\" --domain \"$SITE_DOMAIN\""
+    "deploy": ": \"${WORKER_NAME:?Set WORKER_NAME (see .env.example)}\" \"${SITE_DOMAIN:?Set SITE_DOMAIN (see .env.example)}\" && cf deploy"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
+    "@astrojs/cloudflare": "15.0.0-beta.5",
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.4",
     "astro": "^7.4.5",
@@ -22,6 +24,6 @@
     "node": "^26"
   },
   "devDependencies": {
-    "wrangler": "4.143.0"
+    "cf": "1.0.0-beta.27"
   }
 }
