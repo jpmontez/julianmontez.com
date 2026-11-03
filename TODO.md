@@ -22,6 +22,5 @@ Credentials:
 - Revoke the old Pages deploy token (Cloudflare → My Profile → API Tokens; token ID `3e3095a2…`, still active and no longer used), then archive the 1Password item `Cloudflare API Token — julianmontez.com`.
 
 Follow-ups:
-- Move to Node 26 once it enters LTS: update `engines.node` in `package.json`.
-- Switch deploys from `wrangler deploy` to `cf deploy` once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed (fallback to the Wrangler assets path for detected frameworks); then replace `wrangler.jsonc` via `npx cf migrate` and re-run `cf deploy --dry-run`.
+- Switch deploys from `wrangler deploy` to `cf deploy` once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) is fixed (fallback to the Wrangler assets path for detected frameworks); then replace `wrangler.jsonc` via `bunx cf migrate` and re-run `cf deploy --dry-run`.
 - Move zone config (DNS, settings) into `cf`'s declarative config once it supports zones; drop the matching `infra/` resources.

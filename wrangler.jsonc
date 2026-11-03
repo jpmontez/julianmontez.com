@@ -1,5 +1,5 @@
 // Worker for the static site. Site identity (Worker name, custom domain) is passed
-// by `npm run deploy` from the WORKER_NAME / SITE_DOMAIN env vars, so this file
+// by `bun run deploy` from the WORKER_NAME / SITE_DOMAIN env vars, so this file
 // carries no personal values.
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",

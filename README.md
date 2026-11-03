@@ -4,17 +4,17 @@ Static photoblog built with [Astro](https://astro.build). Deployed to Cloudflare
 
 ## Requirements
 
-- **Node.js 24 LTS.** Pinned once in `package.json` (`engines.node`), and `.npmrc` sets `engine-strict=true`, so `npm install` fails on any other major. CI reads the same pin. On macOS: `brew install node@24` and put `/opt/homebrew/opt/node@24/bin` first on your `PATH`.
-- **No global npm packages.** Build and deploy tools are pinned devDependencies run through npm scripts or `npx`. `cf` (inspection only) isn't installed; `npx cf …` fetches it on demand.
+- **Bun.** Pinned once in `package.json` (`packageManager`). CI reads the same pin. On macOS: `brew install oven-sh/bun/bun`.
+- **No global packages.** Build and deploy tools are pinned devDependencies run through `bun run` scripts or `bunx`. `cf` (inspection only) isn't installed; `bunx cf …` fetches it on demand.
 - **Infrastructure tools** (only to change the Cloudflare setup): `brew install opentofu terraform-docs` and, to adopt an existing zone, `brew install cloudflare/cloudflare/cf-terraforming`.
 
 ## Quick Start
 
 ```bash
-npm install
-npx astro dev        # dev server at http://localhost:4321
-npx astro build      # build to dist/
-npx astro check      # type-check
+bun install
+bunx astro dev        # dev server at http://localhost:4321
+bunx astro build      # build to dist/
+bunx astro check      # type-check
 ```
 
 ## Repository Layout
@@ -79,7 +79,7 @@ Imports files matching `YYYYMMDD-DSC_NNNN.jpg` or `YYYYMMDD-DSCFNNNN.jpg` (an op
 
 How it fits together:
 
-- **Site:** `npm run deploy` runs `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`, uploading the static `dist/` to an assets-only Worker (no script, so no invocations to count) and attaching the custom domain. `wrangler.jsonc` sets trailing-slash handling and serves `404.html` for unknown URLs. `cf` (run on demand with `npx cf …`) is for inspection and admin; it will take over deploys once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) (Astro projects can't `cf deploy`) is fixed.
+- **Site:** `bun run deploy` runs `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`, uploading the static `dist/` to an assets-only Worker (no script, so no invocations to count) and attaching the custom domain. `wrangler.jsonc` sets trailing-slash handling and serves `404.html` for unknown URLs. `cf` (run on demand with `bunx cf …`) is for inspection and admin; it will take over deploys once [cloudflare/cf#18](https://github.com/cloudflare/cf/issues/18) (Astro projects can't `cf deploy`) is fixed.
 - **Everything else on the zone:** DNS, zone settings, the www→apex redirect, WAF custom rules, Bot Fight Mode and Web Analytics are OpenTofu in [`infra/`](infra/README.md). `tofu apply` is run locally; CI only checks for drift.
 
 Each resource has one owner: Wrangler owns the Worker, its assets, its custom domain and the DNS record that domain creates; OpenTofu owns the rest.
@@ -89,8 +89,8 @@ Each resource has one owner: Wrangler owns the Worker, its assets, its custom do
 ```bash
 cp .env.example .env         # fill in the values
 set -a; source .env; set +a
-npm run build && npm run deploy
-npx cf auth whoami           # any other cf command, fetched on demand
+bun run build && bun run deploy
+bunx cf auth whoami           # any other cf command, fetched on demand
 ```
 
 ### Deploy your own
@@ -108,9 +108,9 @@ GitHub Actions (`.github/workflows/deploy.yml`):
 
 | Job | Runs on | Does |
 |---|---|---|
-| `validate` | PRs | `npm ci`, `astro check`, `astro build` |
+| `validate` | PRs | `bun install --frozen-lockfile`, `astro check`, `astro build` |
 | `infra` | PRs and pushes | `tofu fmt -check`, `tofu validate`, terraform-docs sync check, `tofu plan -detailed-exitcode` (fails on drift; skipped when the read token isn't set, e.g. on a fresh fork). Never applies |
-| `deploy` | pushes to `main` (and manual runs on `main`) | `npm ci`, `npm run build` (includes `astro check`), `npm run deploy` (`wrangler deploy`). Independent of `infra`, so zone drift never blocks a new post |
+| `deploy` | pushes to `main` (and manual runs on `main`) | `bun install --frozen-lockfile`, `bun run build` (includes `astro check`), `bun run deploy` (`wrangler deploy`). Independent of `infra`, so zone drift never blocks a new post |
 
 ### Credentials setup
 
@@ -122,7 +122,7 @@ Go to **dash.cloudflare.com → My Profile (top right) → API Tokens → Create
 
 For every token, set **Account Resources** to `Include` · *your account* and **Zone Resources** to `Include` · `Specific zone` · *your domain*. Never pick "All accounts" or "All zones".
 
-**Token `<site>-tf-read`** (e.g. `julianmontez-com-tf-read`). Read-only; used by CI drift checks, adoption and `npx cf` inspection.
+**Token `<site>-tf-read`** (e.g. `julianmontez-com-tf-read`). Read-only; used by CI drift checks, adoption and `bunx cf` inspection.
 
 | Dropdown 1 | Dropdown 2 | Dropdown 3 | Why |
 |---|---|---|---|
@@ -134,7 +134,7 @@ For every token, set **Account Resources** to `Include` · *your account* and **
 | Zone | Zone WAF | Read | Read the WAF custom rules |
 | Zone | Bot Management | Read | Read Bot Fight Mode |
 
-**Token `<site>-deploy`** (e.g. `julianmontez-com-deploy`). Used by `npm run deploy` (Wrangler) in CI and locally.
+**Token `<site>-deploy`** (e.g. `julianmontez-com-deploy`). Used by `bun run deploy` (Wrangler) in CI and locally.
 
 | Dropdown 1 | Dropdown 2 | Dropdown 3 | Why |
 |---|---|---|---|
@@ -188,6 +188,6 @@ On GitHub, open the repo → **Settings**.
 `cp .env.example .env` (gitignored) and fill it in; the file documents each line. Load it with `set -a; source .env; set +a`. `CLOUDFLARE_API_TOKEN` (what every tool reads) defaults to the read-only token; name the write token per command:
 
 ```bash
-CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN npm run deploy
+CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN bun run deploy
 CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TF_APPLY_TOKEN tofu -chdir=infra apply
 ```

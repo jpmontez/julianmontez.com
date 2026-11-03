@@ -2,7 +2,7 @@
   "name": "julianmontez.com",
   "private": true,
   "scripts": {
-    "build": "astro check && astro build && node scripts/check_redirects.mjs",
+    "build": "astro check && astro build && bun scripts/check_redirects.mjs",
     "deploy": "wrangler deploy --name \"$WORKER_NAME\" --domain \"$SITE_DOMAIN\""
   },
   "dependencies": {
@@ -13,15 +13,11 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
-    "yaml-language-server": {
-      ".": "1.21.0",
-      "yaml": "^2.8.3"
-    }
-  },
-  "engines": {
-    "node": "^24"
+    "yaml-language-server": "1.21.0",
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
     "wrangler": "4.143.0"
-  }
+  },
+  "packageManager": "bun@1.4.4"
 }
