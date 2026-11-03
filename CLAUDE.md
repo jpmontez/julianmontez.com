@@ -108,6 +108,7 @@ Post bodies aren't rendered; the photo and its caption are the whole page.
 
 Push to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml`:
 - `validate` job (PRs only): `npm ci` + `npm run build` (`astro check` + `astro build`)
+- Both build jobs restore Astro's encoded images (`node_modules/.astro/assets`) with `actions/cache`, keyed on `src/assets/photos/**`, so only new photos are encoded. A cold build is ~1,000 CPU-seconds and already uses every core
 - `infra` job (PRs and pushes): `tofu fmt -check`, `tofu validate`, terraform-docs check, `tofu plan -detailed-exitcode` as a drift check. **CI never runs `tofu apply`**; apply locally and commit the encrypted `infra/terraform.tfstate`.
 - `deploy` job (non-PR only, independent of `infra`): `npm ci` + `npm run build` + `npm run deploy` → `cf deploy`: an assets-only Worker (no script) per `cloudflare.config.ts`
 

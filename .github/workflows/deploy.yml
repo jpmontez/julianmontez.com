@@ -33,6 +33,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Astro's encoded images. Encoding is CPU-bound (~1,000 CPU-seconds cold), so reuse
+      # them across runs and only encode new photos. Restored after npm ci, which wipes node_modules.
+      - name: Cache optimized images
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.astro/assets
+          key: astro-images-${{ hashFiles('src/assets/photos/**') }}
+          restore-keys: astro-images-
+
       - name: Build site
         run: npm run build
 
@@ -110,6 +119,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Astro's encoded images. Encoding is CPU-bound (~1,000 CPU-seconds cold), so reuse
+      # them across runs and only encode new photos. Restored after npm ci, which wipes node_modules.
+      - name: Cache optimized images
+        uses: actions/cache@v6
+        with:
+          path: node_modules/.astro/assets
+          key: astro-images-${{ hashFiles('src/assets/photos/**') }}
+          restore-keys: astro-images-
 
       - name: Build site
         run: npm run build
