@@ -12,23 +12,23 @@ After completing work: update `TODO.md` (mark done, add new). Only update `READM
 
 ## Commands
 
-Node 24 LTS only (`engines.node` + `engine-strict=true` in `.npmrc`); locally use Homebrew `node@24`. No global npm installs; run tools with `npx`.
+Bun only, pinned once in `package.json` (`packageManager`); locally use Homebrew `bun`. No global installs; run tools with `bunx`.
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Build (static output in dist/)
-npx astro build
+bunx astro build
 
 # Preview (dev server at http://localhost:4321)
-npx astro dev
+bunx astro dev
 
 # Type check
-npx astro check
+bunx astro check
 
 # Deploy dist/ to Cloudflare Workers via wrangler (build first; needs .env loaded: set -a; source .env; set +a)
-npm run deploy
+bun run deploy
 
 # Cloudflare zone infrastructure (from infra/)
 tofu fmt -recursive && tofu validate
@@ -107,12 +107,12 @@ Post bodies aren't rendered; the photo and its caption are the whole page.
 ## Deployment
 
 Push to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml`:
-- `validate` job (PRs only): `npm ci` + `npm run build` (`astro check` + `astro build`)
+- `validate` job (PRs only): `bun install --frozen-lockfile` + `bun run build` (`astro check` + `astro build`)
 - `infra` job (PRs and pushes): `tofu fmt -check`, `tofu validate`, terraform-docs check, `tofu plan -detailed-exitcode` as a drift check. **CI never runs `tofu apply`**; apply locally and commit the encrypted `infra/terraform.tfstate`.
-- `deploy` job (non-PR only, independent of `infra`): `npm ci` + `npm run build` + `npm run deploy` → `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`: an assets-only Worker (no script) serving `dist/` per `wrangler.jsonc`
+- `deploy` job (non-PR only, independent of `infra`): `bun install --frozen-lockfile` + `bun run build` + `bun run deploy` → `wrangler deploy --name "$WORKER_NAME" --domain "$SITE_DOMAIN"`: an assets-only Worker (no script) serving `dist/` per `wrangler.jsonc`
 
 Ownership split — never manage a resource from both tools:
 - Wrangler / `wrangler.jsonc` + deploy flags: the Worker, its assets, its custom domain and the DNS record Cloudflare creates for it
-- `cf` (not installed; `npx` fetches it on demand) is for inspection/admin only (`npx cf dns records export`, `npx cf zones settings get …`)
+- `cf` (not installed; `bunx` fetches it on demand) is for inspection/admin only (`bunx cf dns records export`, `bunx cf zones settings get …`)
 - OpenTofu / `infra/`: zone, all other DNS records, zone settings, www→apex redirect rule, Web Analytics
 - No personal values in `infra/*.tf` or `wrangler.jsonc`; site-specific data lives only in `infra/terraform.tfvars`, GitHub repo variables/secrets, and `.env` (gitignored)
