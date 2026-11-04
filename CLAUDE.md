@@ -81,7 +81,7 @@ src/styles/
 - Images in `src/assets/photos/` are processed by Astro's sharp pipeline at build time
 - Deploys use `cf deploy` through `@astrojs/cloudflare` (pinned beta, 15.0.0-beta.5: the first adapter that supports `cf`). Keep `imageService: 'custom'`, `prerenderEnvironment: 'node'` and `session: false`: otherwise the adapter swaps out Sharp and adds session KV and Images bindings this static site doesn't need. The Worker must stay assets-only (`cf deploy --dry-run` lists only `env.ASSETS`)
 
-**Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (16px at ≥1600px, 17px at ≤600px); colors #fff, #000, #6b6b6b (secondary, dead-end nav text), #e4e4e4 (rules only; fails contrast as text) and nothing else. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
+**Design tokens (`src/styles/theme.css`):** Times stack only (no webfonts), 15px/1.4 (16px at ≥1600px, 17px at ≤600px); colors #fff, #000, #6b6b6b (secondary, dead-end nav text), #e4e4e4 (rules only; fails contrast as text) and nothing else. Dark mode follows the system via `color-scheme: light dark` (meta in BaseLayout + `:root`) and `light-dark()` tokens: #000 bg, #fff ink, #949494 secondary, #1f1f1f rules; in dark mode photos get a 1px `--rule` hairline (low-key photos otherwise dissolve into black) and text uses `-webkit-font-smoothing: antialiased`; this also keeps Safari's Adaptive Dark Mode from recolouring the page. Never hard-code a colour outside the four tokens. Links underline on hover only. Every tap target is ≥44px tall via vertical padding. Cross-document page fade via `@view-transition { navigation: auto }` (CSS only).
 
 ## Content Format
 

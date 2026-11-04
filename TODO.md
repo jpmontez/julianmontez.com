@@ -5,6 +5,7 @@
 - After deploy, check `/page/2/` redirects to `/index/` and an old photo URL (e.g. `/2026/02/2026-02-21-photos/`) redirects to its new one (Workers `_redirects`).
 - Optional: drop Cloudflare Web Analytics if unused (delete `infra/analytics.tf`); its `beacon.min.js` is the only remaining "legacy JavaScript" / short-cache flag in PageSpeed Insights.
 
+- In Safari 27.3+ with Adaptive Dark Mode on and the system in dark mode, check the site shows its own dark theme (black, not Safari's recoloured version).
 - Test swipe on a real iPhone and Android phone: a swipe from the screen edge (the browser's own back gesture) shouldn't also open the previous photo.
 
 ## SEO
