@@ -73,9 +73,9 @@ waf_custom_rules = [
 # Off: WAF custom rules can't skip it, and it would challenge feed readers on cloud hosts.
 bot_fight_mode = false
 
-# Block AI bots, AI Labyrinth on, disallow AI training, JS detections on.
+# Block AI bots off (it blocked Googlebot), AI Labyrinth on, disallow AI training, JS detections on.
 bot_settings = {
-  ai_bots_protection = "block"
+  ai_bots_protection = "disabled"
   crawler_protection = "enabled"
   ai_training        = "disallow"
   enable_js          = true
